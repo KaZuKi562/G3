@@ -7,7 +7,7 @@ $products = [
         "price" => "₱63,990",
         "points" => "80,000 P",
         "getpoints" => "GET 35,000 P",
-        "img" => "iphone15pro_white.jpg"
+        "img" => "img/iphone15pro_white.PNG"
     ],
     [
         "brand" => "Apple",
@@ -15,7 +15,7 @@ $products = [
         "price" => "₱31,005",
         "points" => "50,000 P",
         "getpoints" => "GET 15,000 P",
-        "img" => "iphone13_midnight.jpg"
+        "img" => "img/iPhone13_Midnight.png"
     ],
     [
         "brand" => "Infinix",
@@ -102,9 +102,9 @@ $products = [
             <hr>
             <div class="filter-group">
                 <strong>Price</strong>
-                <div><input type="radio" name="price" id="under10k"><label for="under10k"> Under ₱ 10,000</label></div>
-                <div><input type="radio" name="price" id="10k30k"><label for="10k30k"> ₱ 10,000 to ₱ 30,000</label></div>
-                <div><input type="radio" name="price" id="above50k"><label for="above50k"> Above ₱ 50,000</label></div>
+                <div><input type="checkbox" name= "price" id="under10k"><label for="under10k"> Under ₱ 10,000</label></div>
+                <div><input type="checkbox" name="price" id="10k30k"><label for="10k30k"> ₱ 10,000 to ₱ 30,000</label></div>
+                <div><input type="checkbox" name="price" id="above50k"><label for="above50k"> Above ₱ 50,000</label></div>
             </div>
         </aside>
         <section class="product-list" id="products">
@@ -141,7 +141,7 @@ $products = [
     <footer>
         <div class="footer-columns">
             <div>
-                <strong>ZGroup</strong>
+                <strong>3 Group</strong>
                 <ul>
                     <li>Customer Support</li>
                     <li>Store Locations</li>
