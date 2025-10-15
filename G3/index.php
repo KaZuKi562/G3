@@ -19,35 +19,35 @@ $products = [
     ],
     [
         "brand" => "Infinix",
-        "name" => "INFINIX NOTE 30 PRO 4G",
+        "name" => "INFINIX NOTE 50 PRO 4G",
         "price" => "₱10,199",
         "points" => "18,000 P",
         "getpoints" => "GET 6,000 P",
-        "img" => "infinix_note30pro.jpg"
+        "img" => "img/infinix_note_50.png"
     ],
     [
         "brand" => "Infinix",
-        "name" => "INFINIX GT 10 PRO",
+        "name" => "INFINIX GT 30 PRO",
         "price" => "₱14,199",
         "points" => "22,000 P",
         "getpoints" => "GET 8,000 P",
-        "img" => "infinix_gt10pro.jpg"
+        "img" => "img/infinix_gt_30.png"
     ],
     [
         "brand" => "Realme",
-        "name" => "REALME 10 PRO 5G 128GB - 128GB SUEDE GRAY",
+        "name" => "REALME 14 PRO+ 5G (12GB + 512GB) SUEDE GRAY",
         "price" => "₱23,990",
         "points" => "89,000 P",
         "getpoints" => "GET 25,000 P",
-        "img" => "realme10pro_suede.jpg"
+        "img" => "img/realme_14.png"
     ],
     [
         "brand" => "Realme",
-        "name" => "REALME 10 PRO 5G 128GB - VELVET GREEN",
+        "name" => "REALME 15 PRO 5G (12GB + 256GB) VELVET GREEN",
         "price" => "₱27,990",
         "points" => "40,000 P",
         "getpoints" => "GET 20,000 P",
-        "img" => "realme10pro_green.jpg"
+        "img" => "img/realme_15_pro.png"
     ],
 ];
 ?>
@@ -80,13 +80,13 @@ $products = [
                 <button class="order-btn">Order Now!</button>
             </div>
             <div class="hero-img">
-                <img src="banner-phone.png" alt="Banner Phone">
+                <img src="img/infinix_note_50.png" alt="Banner Phone">
             </div>
         </div>
         <nav class="tabs">
+            <button class="tab" onclick="showTab('tablet')">Home</button>
             <button class="tab active" onclick="showTab('cellphone')">Cellphone</button>
             <button class="tab" onclick="showTab('tablet')">Tablet</button>
-            <button class="tab" onclick="showTab('headset')">Headset</button>
             <button class="tab" onclick="showTab('laptop')">Laptop</button>
         </nav>
     </header>
