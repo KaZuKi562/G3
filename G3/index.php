@@ -73,40 +73,18 @@ $products = [
                 <span><a href="#">Sign Up</a></span>
             </div>
         </div>
-        <div class="hero-banner">
-            <div class="hero-content">
-                <h1>Order now to get<br>Points</h1>
-                <p>Collected points can be used to redeem free product</p>
-                <button class="order-btn">Order Now!</button>
-            </div>
-            <div class="hero-img">
-                <img src="img/infinix_note_50.png" alt="Banner Phone">
-            </div>
+        <div >
+            <img src="ads/ad2.gif" alt="" style="width:1200;height:348px;">    
         </div>
         <nav class="tabs">
-            <button class="tab" onclick="showTab('tablet')">Home</button>
-            <button class="tab active" onclick="showTab('cellphone')">Cellphone</button>
+            <button class="tab active" onclick="showTab('home')">Home</button>
+            <button class="tab" onclick="showTab('phone.php')">Cellphone</button>
             <button class="tab" onclick="showTab('tablet')">Tablet</button>
             <button class="tab" onclick="showTab('laptop')">Laptop</button>
         </nav>
     </header>
     <div class="content">
-        <aside class="filters">
-            <h2>Filters</h2>
-            <div class="filter-group">
-                <strong>Brands</strong>
-                <div><input type="checkbox" id="apple"> <label for="apple">Apple</label></div>
-                <div><input type="checkbox" id="infinix"> <label for="infinix">Infinix</label></div>
-                <div><input type="checkbox" id="realme"> <label for="realme">Realme</label></div>
-            </div>
-            <hr>
-            <div class="filter-group">
-                <strong>Price</strong>
-                <div><input type="checkbox" name= "price" id="under10k"><label for="under10k"> Under ₱ 10,000</label></div>
-                <div><input type="checkbox" name="price" id="10k30k"><label for="10k30k"> ₱ 10,000 to ₱ 30,000</label></div>
-                <div><input type="checkbox" name="price" id="above50k"><label for="above50k"> Above ₱ 50,000</label></div>
-            </div>
-        </aside>
+        
         <section class="product-list" id="products">
             <?php foreach($products as $p): ?>
             <div class="product-card" data-brand="<?= $p['brand'] ?>" data-price="<?= $p['price'] ?>">

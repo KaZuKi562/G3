@@ -205,7 +205,7 @@ header .top-bar {
     color: #222;
     margin-bottom: 16px;
     font-weight: 400;
-     display: flex; /* Enable Flexbox */
+    display: flex; /* Enable Flexbox */
     justify-content: space-between; /* Push items to the far ends */
     width: 100%; /* Ensure it spans the full width of the product card */
     padding: 0 10px; /* Optional: Add horizontal padding to the prices to match the card's visual edges */
