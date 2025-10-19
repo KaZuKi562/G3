@@ -59,99 +59,112 @@ $products = [
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="main-container">
-    <header>
-        <div class="top-bar">
-            <div class="brand">Swastecha</div>
-            <div class="search-bar">
-                <input type="text" placeholder="Search">
-            </div>
-            <div class="user-cart">
-                <span class="cart">&#128722;</span>
-                <span><a href="#">Log In</a></span>
-                <span>|</span>
-                <span><a href="#">Sign Up</a></span>
-            </div>
+ <div class="top-bar">
+        <div class="brand">Swastecha</div>
+        <div class="search-bar">
+            <input type="text" placeholder="Search">
         </div>
-        <div >
-            <img src="ads/ad2.gif" alt="" style="width:1200;height:348px;">    
+        <div class="user-cart">
+            <span class="cart">&#128722;</span>
+            <span><a href="#">Log In</a></span>
+            <span>|</span>
+            <span><a href="#">Sign Up</a></span>
         </div>
-        <nav class="tabs">
-            <button class="tab active" onclick="showTab('home')">Home</button>
-            <button class="tab" onclick="showTab('phone.php')">Cellphone</button>
-            <button class="tab" onclick="showTab('tablet')">Tablet</button>
-            <button class="tab" onclick="showTab('laptop')">Laptop</button>
-        </nav>
-    </header>
-    <div class="content">
-        
-        <section class="product-list" id="products">
-            <?php foreach($products as $p): ?>
-            <div class="product-card" data-brand="<?= $p['brand'] ?>" data-price="<?= $p['price'] ?>">
-                <img src="<?= $p['img'] ?>" alt="<?= $p['name'] ?>">
-                <div class="product-title"><?= $p['name'] ?></div>
-                <div class="product-prices">
-                    <span><?= $p['price'] ?></span> <span><?= $p['points'] ?></span>
-                </div>
-                <div class="product-getpoints"><?= $p['getpoints'] ?></div>
-                <button class="cart-btn">Add to cart</button>
-            </div>
-            <?php endforeach; ?>
-        </section>
     </div>
+
+    <div class="ads-banner">
+        <img src="ads/ad.png" alt="Advertisement">
+    </div>
+
+    <nav class="tabs">
+        <a href="index.php">
+            <button class="tab active">Home</button>
+        </a>
+        <a href="phone.php">
+            <button class="tab">Cellphone</button>
+        </a>
+        <a href="tablet.php">
+            <button class="tab">Tablet</button>
+         </a>
+        <a href="laptop.php">
+             <button class="tab">Laptop</button>
+        </a>
+    </nav>
+
+    <div class="main-container">
+        
+        <div class="content">
+            <section class="product-list" id="products">
+                <?php foreach($products as $p): ?>
+                <div class="product-card" data-brand="<?= $p['brand'] ?>" data-price="<?= $p['price'] ?>">
+                    <img src="<?= $p['img'] ?>" alt="<?= $p['name'] ?>">
+                    <div class="product-title"><?= $p['name'] ?></div>
+                    <div class="product-prices">
+                        <span><?= $p['price'] ?></span> <span><?= $p['points'] ?></span>
+                    </div>
+                    <div class="product-getpoints"><?= $p['getpoints'] ?></div>
+                    <button class="cart-btn">Add to cart</button>
+                </div>
+                <?php endforeach; ?>
+            </section>
+        </div>
+        
+    </div>
+
     <section class="features">
-        <div>
-            <img src="delivery.png" alt="">
-            <span>Delivery</span>
-            <small>Delivery coverage around Pampanga</small>
-        </div>
-        <div>
-            <img src="payment.png" alt="">
-            <span>Secured Payment</span>
-            <small>Your payment information is processed securely</small>
-        </div>
-        <div>
-            <img src="support.png" alt="">
-            <span>Customer Support</span>
-            <small>Customer support to help you all the way</small>
-        </div>
-    </section>
-    <footer>
-        <div class="footer-columns">
             <div>
-                <strong>3 Group</strong>
-                <ul>
-                    <li>Customer Support</li>
-                    <li>Store Locations</li>
-                    <li>Terms of Service</li>
-                    <li>Refund Policy</li>
-                    <li>Corporate Sales</li>
-                    <li>Contact Us</li>
-                </ul>
+                <img src="delivery.png" alt="">
+                <span>Delivery</span>
+                <small>Delivery coverage around Pampanga</small>
             </div>
             <div>
-                <strong>Policies</strong>
-                <ul>
-                    <li>Privacy Policy</li>
-                    <li>Terms and Condition</li>
-                    <li>Return and Exchange Policy</li>
-                    <li>FAQs</li>
-                    <li>Do not sell my personal information</li>
-                </ul>
+                <img src="payment.png" alt="">
+                <span>Secured Payment</span>
+                <small>Your payment information is processed securely</small>
             </div>
             <div>
-                <strong>Product Categories</strong>
-                <ul>
-                    <li>Cellphone</li>
-                    <li>Tablet</li>
-                    <li>Headset</li>
-                    <li>Laptop</li>
-                    <li>Corporate Sales</li>
-                </ul>
+                <img src="support.png" alt="">
+                <span>Customer Support</span>
+                <small>Customer support to help you all the way</small>
             </div>
-        </div>
-    </footer>
-</div>
-<script src="main.js"></script>
+        </section>
+        <footer>
+            <div class="footer-columns">
+                <div>
+                    <strong>3 Group</strong>
+                    <ul>
+                        <li>Customer Support</li>
+                        <li>Store Locations</li>
+                        <li>Terms of Service</li>
+                        <li>Refund Policy</li>
+                        <li>Corporate Sales</li>
+                        <li>Contact Us</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>Policies</strong>
+                    <ul>
+                        <li>Privacy Policy</li>
+                        <li>Terms and Condition</li>
+                        <li>Return and Exchange Policy</li>
+                        <li>FAQs</li>
+                        <li>Do not sell my personal information</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>Product Categories</strong>
+                    <ul>
+                        <li>Cellphone</li>
+                        <li>Tablet</li>
+                        <li>Headset</li>
+                        <li>Laptop</li>
+                        <li>Corporate Sales</li>
+                    </ul>
+                </div>
+            </div>
+        </footer>
+
+
+    <script src="main.js"></script>
 </body>
 </html>

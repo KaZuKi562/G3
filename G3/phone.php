@@ -54,41 +54,43 @@ $products = [
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta charset="UTF-8">
     <title>Swastecha Points Redemption Store</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="main-container">
-    <header>
-        <div class="top-bar">
-            <div class="brand">Swastecha</div>
-            <div class="search-bar">
-                <input type="text" placeholder="Search">
-            </div>
-            <div class="user-cart">
-                <span class="cart">&#128722;</span>
-                <span><a href="#">Log In</a></span>
-                <span>|</span>
-                <span><a href="#">Sign Up</a></span>
-            </div>
+   <div class="top-bar">
+        <div class="brand">Swastecha</div>
+        <div class="search-bar">
+            <input type="text" placeholder="Search">
         </div>
-        <div class="hero-banner">
-            <div class="hero-content">
-                <h1>Order now to get<br>Points</h1>
-                <p>Collected points can be used to redeem free product</p>
-                <button class="order-btn">Order Now!</button>
-            </div>
-            <div class="hero-img">
-                <img src="img/infinix_note_50.png" alt="Banner Phone">
-            </div>
+        <div class="user-cart">
+            <span class="cart">&#128722;</span>
+            <span><a href="#">Log In</a></span>
+            <span>|</span>
+            <span><a href="#">Sign Up</a></span>
         </div>
-        <nav class="tabs">
-            <button class="tab" onclick="showTab('home')">Home</button>
-            <button class="tab active" onclick="showTab('cellphone')">Cellphone</button>
-            <button class="tab" onclick="showTab('tablet')">Tablet</button>
-            <button class="tab" onclick="showTab('laptop')">Laptop</button>
-        </nav>
+    </div>
+
+    <nav class="tabs">
+        <a href="index.php">
+            <button class="tab">Home</button>
+        </a>
+        <a href="phone.php">
+            <button class="tab active">Cellphone</button>
+        </a>
+        <a href="tablet.php">
+            <button class="tab">Tablet</button>
+         </a>
+        <a href="laptop.php">
+             <button class="tab">Laptop</button>
+        </a>
+    </nav>
+    
+    <div class="main-container">
+        <header>
+        
     </header>
     <div class="content">
         <aside class="filters">
@@ -121,7 +123,9 @@ $products = [
             <?php endforeach; ?>
         </section>
     </div>
-    <section class="features">
+    
+</div>
+<section class="features">
         <div>
             <img src="delivery.png" alt="">
             <span>Delivery</span>
@@ -173,7 +177,7 @@ $products = [
             </div>
         </div>
     </footer>
-</div>
+
 <script src="main.js"></script>
 </body>
 </html>
