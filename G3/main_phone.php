@@ -73,19 +73,21 @@ $products = [
         <div class="search-bar">
             <input type="text" placeholder="Search">
         </div>
-        <div class="user-cart">
-            <span class="cart">&#128722;</span>
-            <span><a href="login.php">Log In</a></span>
-            <span>|</span>
-            <span><a href="signup.php">Sign Up</a></span>
+                <div class="user-cart">
+            <a href="cart.html">
+                <img src="icon/cart.png" alt="Cart" class="icon">
+            </a>
+            <a href="user.html">
+                <img src="icon/user.png" alt="User" class="icon">
+            </a>
         </div>
     </div>
 
     <nav class="tabs">
-        <a href="index.php">
+        <a href="main_home.php">
             <button class="tab">Home</button>
         </a>
-        <a href="phone.php">
+        <a href="main_phone.php">
             <button class="tab active">Cellphone</button>
         </a>
         <a href="tablet.php">
@@ -106,7 +108,7 @@ $products = [
     <form method="get" id="filterForm">
         <div class="filter-group">
             <strong>Brands</strong>
-                <div> 
+                <div>
                     <input type="checkbox" name="brand[]" value="Apple" id="apple"
                         <?= (isset($_GET['brand']) && in_array('Apple', $_GET['brand'])) ? 'checked' : '' ?>>
                     <label for="apple">Apple</label>

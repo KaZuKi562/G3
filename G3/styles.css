@@ -53,35 +53,69 @@ body {
     display: flex;
     align-items: center;
     font-size: 16px;
-    gap: 10px;
-    margin-right: 50px;
+    gap: 30px;
+    margin-right: 60px;
 }
+
+.user-cart .icon {
+  width: 30px;   /* adjust as needed */
+  height: 30px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.user-cart .icon:hover {
+  transform: scale(1.1); /* small hover effect */
+}
+
 .cart {
     font-size: 24px;
     margin-right: 8px;
 }
+/* Banner container */
 .ads-banner {
-    width: 100vw; /* Ensure it spans the full viewport width */
-    height: auto;
-    padding: 0;
-    margin: 0;
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    margin-top: 60px;
 }
 
-.ads-banner img {
-    margin-top: 40px;
-    width: 100%;      /* Ensure the image spans the entire width */
-    height: auto;     /* Automatically adjust height based on the width */
-    max-height: 500px; /* Set a max-height to control how tall the image can be */
-    object-fit: cover; /* Make sure the image covers the container, maintaining its aspect ratio */
-    display: block;    /* Remove any unwanted space below the image */
+/* The sliding track */
+.ads-track {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
 }
 
-
-@media (max-width: 768px) {
-    .hero-banner {
-        transform: scale(1); /* Scale to 1 on smaller devices */
-    }
+/* Each ad image */
+.ads-track img {
+    width: 100%;
+    height: 500px;
+    flex-shrink: 0;
 }
+
+/* Dots navigation */
+.ads-dots {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+}
+
+.ads-dots span {
+    width: 10px;
+    height: 10px;
+    background: #8b8b8b;
+    border-radius: 50%;
+    cursor: pointer;    
+    transition: background 0.3s;
+}
+
+.ads-dots span.active {
+    background: #383838;
+}
+
 
 .hero-content h1 {
     font-size: 38px;
@@ -111,7 +145,7 @@ body {
 .tabs {
     position: sticky;
     top: 60px;
-    z-index: 999; /* Keeps the navigation bar above other content */
+    z-index: 100; /* Keeps the navigation bar above other content */
     background: #fff; /* Adds background to prevent transparency when scrolling */
     width: 100%; /* Ensure it spans the full width */
     padding: 10px 0; /* Adjust padding as needed */
@@ -258,6 +292,24 @@ body {
     padding: 0 5px; /* Optional: Add horizontal padding to the prices to match the card's visual edges */
 }
 .cart-btn {
+    background-color: #ffffff;
+    color: #000000;
+    border: solid 2px #0751d9;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: 16px;
+    margin-top: auto; /* Keeps the button at the bottom */
+    width: 100%;
+    height: 40px;
+    transition: background 0.15s;
+    margin-top: 8px;
+}
+.cart-btn:hover {
+    background: #70a7ff;
+}
+
+.buy-btn {
     background-color: #0751d9;
     color: #fff;
     border: none;
@@ -270,9 +322,10 @@ body {
     height: 40px;
     transition: background 0.15s;
 }
-.cart-btn:hover {
+.buy-btn:hover {
     background: #003fa6;
 }
+
 .features {
     display: flex;
     justify-content: space-around;
@@ -344,4 +397,5 @@ footer {
     .product-list { grid-template-columns: 1fr; }
     .footer-columns { flex-direction: column; gap: 32px; }
 }
+
 

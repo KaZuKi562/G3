@@ -74,10 +74,12 @@ $products = [
             <input type="text" placeholder="Search">
         </div>
         <div class="user-cart">
-            <span class="cart">&#128722;</span>
-            <span><a href="login.php">Log In</a></span>
-            <span>|</span>
-            <span><a href="signup.php">Sign Up</a></span>
+            <a href="cart.html">
+                <img src="icon/cart.png" alt="Cart" class="icon">
+            </a>
+            <a href="user.html">
+                <img src="icon/user.png" alt="User" class="icon">
+            </a>
         </div>
     </div>
 
@@ -90,10 +92,10 @@ $products = [
     </div>
 
     <nav class="tabs">
-        <a href="index.php">
+        <a href="main_home.php">
             <button class="tab active">Home</button>
         </a>
-        <a href="phone.php">
+        <a href="main_phone.php">
             <button class="tab">Cellphone</button>
         </a>
         <a href="tablet.php">
