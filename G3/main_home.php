@@ -3,7 +3,7 @@
 $products = [
     [
         "brand" => "Apple",
-        "name" => "IPHONE 15 PRO 256GB WHITE TITANIUM",
+        "name" => "IPHONE 15 PRO 256GB",
         "price" => "₱63,990",
         "points" => "80,000 P",
         "getpoints" => "GET 35,000 P",
@@ -11,7 +11,7 @@ $products = [
     ],
     [
         "brand" => "Apple",
-        "name" => "IPHONE 13 128GB MIDNIGHT",
+        "name" => "IPHONE 13 128GB",
         "price" => "₱31,005",
         "points" => "50,000 P",
         "getpoints" => "GET 15,000 P",
@@ -59,6 +59,16 @@ $products = [
     ],
 
 ];
+
+// Search logic
+$search = '';
+$filtered_products = $products;
+if (isset($_GET['search']) && trim($_GET['search']) !== '') {
+    $search = trim($_GET['search']);
+    $filtered_products = array_filter($products, function($p) use ($search) {
+        return stripos($p['brand'], $search) !== false || stripos($p['name'], $search) !== false;
+    });
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -71,7 +81,10 @@ $products = [
  <div class="top-bar">
         <div class="brand">Swastecha</div>
         <div class="search-bar">
-            <input type="text" placeholder="Search">
+            <form method="get" action="">
+                <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search">
+                <button type="submit">Search</button>
+            </form>
         </div>
         <div class="user-cart">
             <a href="cart.html">
@@ -110,18 +123,22 @@ $products = [
         
         <div class="content">
             <section class="product-list" id="products">
-                <?php foreach($products as $p): ?>
-                <div class="product-card" data-brand="<?= $p['brand'] ?>" data-price="<?= $p['price'] ?>">
-                    <img src="<?= $p['img'] ?>" alt="<?= $p['name'] ?>">
-                    <div class="product-title"><?= $p['name'] ?></div>
-                    <div class="product-prices">
-                        <span><?= $p['price'] ?></span> <span><?= $p['points'] ?></span>
+                <?php if (empty($filtered_products)): ?>
+                    <div style="padding:20px;text-align:center;">No products found.</div>
+                <?php else: ?>
+                    <?php foreach($filtered_products as $p): ?>
+                    <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>">
+                        <img src="<?= htmlspecialchars($p['img']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
+                        <div class="product-title"><?= htmlspecialchars($p['name']) ?></div>
+                        <div class="product-prices">
+                            <span><?= htmlspecialchars($p['price']) ?></span> <span><?= htmlspecialchars($p['points']) ?></span>
+                        </div>
+                        <div class="product-getpoints"><?= htmlspecialchars($p['getpoints']) ?></div>
+                        <button class="buy-btn">Buy now</button>
+                        <button class="cart-btn">Add to cart</button>
                     </div>
-                    <div class="product-getpoints"><?= $p['getpoints'] ?></div>
-                    <button class="buy-btn">Buy now</button>
-                    <button class="cart-btn">Add to cart</button>
-                </div>
-                <?php endforeach; ?>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </section>
         </div>
         

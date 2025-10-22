@@ -2,7 +2,7 @@
 $products = [
     [
         "brand" => "Apple",
-        "name" => "IPHONE 15 PRO 256GB WHITE TITANIUM",
+        "name" => "IPHONE 15 PRO 256GB",
         "price" => "₱63,990",
         "points" => "80,000 P",
         "getpoints" => "GET 35,000 P",
@@ -10,7 +10,7 @@ $products = [
     ],
     [
         "brand" => "Apple",
-        "name" => "IPHONE 13 128GB MIDNIGHT",
+        "name" => "IPHONE 13 128GB",
         "price" => "₱31,005",
         "points" => "50,000 P",
         "getpoints" => "GET 15,000 P",
@@ -34,7 +34,7 @@ $products = [
     ],
     [
         "brand" => "Realme",
-        "name" => "REALME 14 PRO+ 5G (12GB + 512GB) SUEDE GRAY",
+        "name" => "REALME 14 PRO+ 5G (12GB + 512GB)",
         "price" => "₱23,990",
         "points" => "89,000 P",
         "getpoints" => "GET 25,000 P",
@@ -42,14 +42,14 @@ $products = [
     ],
     [
         "brand" => "Realme",
-        "name" => "REALME 15 PRO 5G (12GB + 256GB) VELVET GREEN",
+        "name" => "REALME 15 PRO 5G (12GB + 256GB)",
         "price" => "₱27,990",
         "points" => "40,000 P",
         "getpoints" => "GET 20,000 P",
         "img" => "img/realme_15_pro.png"
     ],
     [
-        "brand" => "Infinix",
+        "brand" => "INFINIX",
         "name" => "INFINIX HOT 50i",
         "price" => "₱4,499",
         "points" => "3,000 P",
@@ -58,6 +58,51 @@ $products = [
     ],
 
 ];
+
+// Convert price from "₱31,005" to numeric 31005 for comparison
+function parsePrice($price) {
+    return (int) str_replace(['₱', ',', ' '], '', $price);
+}
+
+// ======= FILTERING LOGIC =======
+
+// Start with all products
+$filteredProducts = $products;
+
+// Apply brand filter if set
+if (!empty($_GET['brand'])) {
+    $brands = $_GET['brand'];
+    $filteredProducts = array_filter($filteredProducts, function($p) use ($brands) {
+        return in_array($p['brand'], $brands);
+    });
+}
+
+// Apply price filter if set
+if (!empty($_GET['price'])) {
+    $priceFilters = $_GET['price'];
+    $filteredProducts = array_filter($filteredProducts, function($p) use ($priceFilters) {
+        $price = parsePrice($p['price']);
+        foreach ($priceFilters as $filter) {
+            if (
+                ($filter === 'under10k' && $price < 10000) ||
+                ($filter === '10k30k' && $price >= 10000 && $price <= 30000) ||
+                ($filter === 'above50k' && $price > 50000)
+            ) {
+                return true;
+            }
+        }
+        return false;
+    });
+}
+
+// Apply search filter if set
+$search = '';
+if (isset($_GET['search']) && trim($_GET['search']) !== '') {
+    $search = trim($_GET['search']);
+    $filteredProducts = array_filter($filteredProducts, function($p) use ($search) {
+        return stripos($p['brand'], $search) !== false || stripos($p['name'], $search) !== false;
+    });
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -70,11 +115,29 @@ $products = [
 <body>
    <div class="top-bar">
         <div class="brand">Swastecha</div>
-        <div class="search-bar">
-            <input type="text" placeholder="Search">
+       <div class="search-bar">
+            <form method="get" action="">
+                <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search">
+                <!-- Keep all filter values in the search form so they stay checked when searching -->
+                <?php
+                if (!empty($_GET['brand'])) {
+                    foreach ($_GET['brand'] as $b) {
+                        echo '<input type="hidden" name="brand[]" value="' . htmlspecialchars($b) . '">';
+                    }
+                }
+                if (!empty($_GET['price'])) {
+                    foreach ($_GET['price'] as $p) {
+                        echo '<input type="hidden" name="price[]" value="' . htmlspecialchars($p) . '">';
+                    }
+                }
+                ?>
+                <button type="submit">Search</button>
+            </form>
         </div>
-        <div class="user-cart">
-            <span class="cart">&#128722;</span>
+       <div class="user-cart">
+            <a href="cart.html">
+                <img src="icon/cart.png" alt="Cart" class="icon">
+            </a>
             <span><a href="login.php">Log In</a></span>
             <span>|</span>
             <span><a href="signup.php">Sign Up</a></span>
@@ -98,12 +161,15 @@ $products = [
     
     <div class="main-container">
         <header>
-        
-    </header>
+        </header>
     <div class="content">
     <aside class="filters">
     <h2>Filters</h2>
     <form method="get" id="filterForm">
+        <!-- Keep search term in filter form so it stays in the search bar when filtering -->
+        <?php if ($search !== ''): ?>
+            <input type="hidden" name="search" value="<?= htmlspecialchars($search) ?>">
+        <?php endif; ?>
         <div class="filter-group">
             <strong>Brands</strong>
                 <div> 
@@ -145,50 +211,14 @@ $products = [
     </aside>
 
         <section class="product-list" id="products">
-        
-            <?php
-// ===== FILTERING LOGIC =====
-
-// Convert price from "₱31,005" to numeric 31005 for comparison
-function parsePrice($price) {
-    return (int) str_replace(['₱', ',', ' '], '', $price);
-}
-
-// Apply filters if any are set
-$filteredProducts = $products;
-
-if (!empty($_GET['brand'])) {
-    $brands = $_GET['brand'];
-    $filteredProducts = array_filter($filteredProducts, function($p) use ($brands) {
-        return in_array($p['brand'], $brands);
-    });
-}
-
-if (!empty($_GET['price'])) {
-    $priceFilters = $_GET['price'];
-    $filteredProducts = array_filter($filteredProducts, function($p) use ($priceFilters) {
-        $price = parsePrice($p['price']);
-        foreach ($priceFilters as $filter) {
-            if (
-                ($filter === 'under10k' && $price < 10000) ||
-                ($filter === '10k30k' && $price >= 10000 && $price <= 30000) ||
-                ($filter === 'above50k' && $price > 50000)
-            ) {
-                return true;
-            }
-        }
-        return false;
-    });
-}
-?>
             <?php foreach($filteredProducts as $p): ?>
-            <div class="product-card" data-brand="<?= $p['brand'] ?>" data-price="<?= $p['price'] ?>">
-                <img src="<?= $p['img'] ?>" alt="<?= $p['name'] ?>">
-                <div class="product-title"><?= $p['name'] ?></div>
+            <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>">
+                <img src="<?= htmlspecialchars($p['img']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
+                <div class="product-title"><?= htmlspecialchars($p['name']) ?></div>
                 <div class="product-prices">
-                    <span><?= $p['price'] ?></span> <span><?= $p['points'] ?></span>
+                    <span><?= htmlspecialchars($p['price']) ?></span> <span><?= htmlspecialchars($p['points']) ?></span>
                 </div>
-                <div class="product-getpoints"><?= $p['getpoints'] ?></div>
+                <div class="product-getpoints"><?= htmlspecialchars($p['getpoints']) ?></div>
                 <button class="buy-btn">Buy now</button>
                 <button class="cart-btn">Add to cart</button>
             </div>
@@ -197,10 +227,8 @@ if (!empty($_GET['price'])) {
             <?php if (empty($filteredProducts)): ?>
             <p style="font-size:18px; color:#666;">No products found matching your filters.</p>
             <?php endif; ?>
-
         </section>
     </div>
-    
 </div>
 <section class="features">
         <div>
