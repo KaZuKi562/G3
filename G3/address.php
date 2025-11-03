@@ -1,18 +1,19 @@
 <?php
 // Database connection
-$conn = new mysqli("localhost", "root", "", "swastecha_db");
+session_start();
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+$user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
 
-$user_id = 1; 
+$user = null;
+if ($user_id) {
+    include "db_connect.php";
+
 $sql = "SELECT user_id, username, email, user_address, user_number, getpoints FROM account WHERE user_id = ?";
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     die("SQL Error: " . $conn->error);
 }
+
 // ... (rest of DB connection and fetch) ...
 
 $stmt->bind_param("i", $user_id);
@@ -27,6 +28,7 @@ $conn->close();
 $has_address = false;
 if ($user && !empty(trim($user['user_address']))) {
     $has_address = true;
+}
 }
 ?>
 
@@ -89,10 +91,10 @@ if ($user && !empty(trim($user['user_address']))) {
     <div class="top-bar">
         <div class="brand">Swastecha</div>
        <div class="user-cart">
-            <a href="cart.html">
+            <a href="">
                 <img src="icon/cart.png" alt="Cart" class="icon">
             </a>
-            <a href="user.html">
+            <a href="user.php">
                 <img src="icon/user.png" alt="User" class="icon">
             </a>
         </div>
@@ -101,6 +103,7 @@ if ($user && !empty(trim($user['user_address']))) {
     <div class="main-container">
         <div class="content">
             <div class="sidebar">
+                <a href="main_home.php">Home</a>
                 <a href="user.php">My Account</a>
                 <a href="address.php">My Address</a>
                 <a href="orders.php">My Orders</a>
@@ -125,11 +128,12 @@ if ($user && !empty(trim($user['user_address']))) {
             <p tyle="font-size: 20px;"><strong>Address: </strong><?php echo htmlspecialchars($user['user_address']); ?></p>
 
             <div class="button-container">
-                <button class="edit-btn">Edit</button>
-                <button class="delete-btn">Delete</button>
-            </div>
+                <button class="edit-btn" onclick="window.location.href='editAddress.php';">Edit</button>
+                <a href="delete.php?user_id=<?php echo $user_id;?>" class="delete-btn" onclick="return confirm('Are you sure you want to delete this Address   ?');">Delete</a>
+                
+            </div> 
         </div>
-    <?php else: ?>
+    <?php else: ?> 
       <p>User not found.</p>
     <?php endif; ?>
                 </div>

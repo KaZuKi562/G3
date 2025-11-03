@@ -1,116 +1,77 @@
 <?php
-$products = [
-    [
-        "brand" => "Apple",
-        "name" => "IPHONE 15 PRO 256GB",
-        "price" => "₱63,990",
-        "points" => "80,000 P",
-        "getpoints" => "GET 35,000 P",
-        "img" => "img/iphone15pro_white.PNG"
-    ],
-    [
-        "brand" => "Apple",
-        "name" => "IPHONE 13 128GB",
-        "price" => "₱31,005",
-        "points" => "50,000 P",
-        "getpoints" => "GET 15,000 P",
-        "img" => "img/iPhone13_Midnight.png"
-    ],
-    [
-        "brand" => "Infinix",
-        "name" => "INFINIX NOTE 50 PRO 4G",
-        "price" => "₱10,199",
-        "points" => "18,000 P",
-        "getpoints" => "GET 6,000 P",
-        "img" => "img/infinix_note_50.png"
-    ],
-    [
-        "brand" => "Infinix",
-        "name" => "INFINIX GT 30 PRO",
-        "price" => "₱14,199",
-        "points" => "22,000 P",
-        "getpoints" => "GET 8,000 P",
-        "img" => "img/infinix_gt_30.png"
-    ],
-    [
-        "brand" => "Realme",
-        "name" => "REALME 14 PRO+ 5G (12GB + 512GB)",
-        "price" => "₱23,990",
-        "points" => "89,000 P",
-        "getpoints" => "GET 25,000 P",
-        "img" => "img/realme_14.png"
-    ],
-    [
-        "brand" => "Realme",
-        "name" => "REALME 15 PRO 5G (12GB + 256GB)",
-        "price" => "₱27,990",
-        "points" => "40,000 P",
-        "getpoints" => "GET 20,000 P",
-        "img" => "img/realme_15_pro.png"
-    ],
-    [
-        "brand" => "INFINIX",
-        "name" => "INFINIX HOT 50i",
-        "price" => "₱4,499",
-        "points" => "3,000 P",
-        "getpoints" => "GET 1,500 P",
-        "img" => "img/infinix-hot-50i.png"
-    ],
+$mysqli = new mysqli("localhost", "root", "", "swastecha_db");
+if ($mysqli->connect_errno) {
+    die("Failed to connect: " . $mysqli->connect_error);
+}
 
-];
-
-// Convert price from "₱31,005" to numeric 31005 for comparison
+// Convert price to numeric for filter matching
 function parsePrice($price) {
     return (int) str_replace(['₱', ',', ' '], '', $price);
 }
 
-// ======= FILTERING LOGIC =======
+$where = [];
+$params = [];
+$types = "";
 
-// Start with all products
-$filteredProducts = $products;
-
-// Apply brand filter if set
+// --- Brand filter (checkbox) ---
 if (!empty($_GET['brand'])) {
     $brands = $_GET['brand'];
-    $filteredProducts = array_filter($filteredProducts, function($p) use ($brands) {
-        return in_array($p['brand'], $brands);
-    });
+    $in = implode(',', array_fill(0, count($brands), '?'));
+    $where[] = "brand IN ($in)";
+    $types .= str_repeat('s', count($brands));
+    $params = array_merge($params, $brands);
 }
 
-// Apply price filter if set
+// --- Price filter (checkbox) ---
+$priceFilterSql = [];
 if (!empty($_GET['price'])) {
-    $priceFilters = $_GET['price'];
-    $filteredProducts = array_filter($filteredProducts, function($p) use ($priceFilters) {
-        $price = parsePrice($p['price']);
-        foreach ($priceFilters as $filter) {
-            if (
-                ($filter === 'under10k' && $price < 10000) ||
-                ($filter === '10k30k' && $price >= 10000 && $price <= 30000) ||
-                ($filter === 'above50k' && $price > 50000)
-            ) {
-                return true;
-            }
+    foreach ($_GET['price'] as $filter) {
+        if ($filter === 'under10k') {
+            $priceFilterSql[] = "(CAST(REPLACE(REPLACE(REPLACE(price, '₱', ''), ',', ''), ' ', '') AS UNSIGNED) < 10000)";
+        } elseif ($filter === '10k30k') {
+            $priceFilterSql[] = "(CAST(REPLACE(REPLACE(REPLACE(price, '₱', ''), ',', ''), ' ', '') AS UNSIGNED) BETWEEN 10000 AND 30000)";
+        } elseif ($filter === 'above50k') {
+            $priceFilterSql[] = "(CAST(REPLACE(REPLACE(REPLACE(price, '₱', ''), ',', ''), ' ', '') AS UNSIGNED) > 50000)";
         }
-        return false;
-    });
+    }
+    if ($priceFilterSql) {
+        $where[] = '(' . implode(' OR ', $priceFilterSql) . ')';
+    }
 }
 
-// Apply search filter if set
+// --- Search filter ---
 $search = '';
 if (isset($_GET['search']) && trim($_GET['search']) !== '') {
     $search = trim($_GET['search']);
-    $filteredProducts = array_filter($filteredProducts, function($p) use ($search) {
-        return stripos($p['brand'], $search) !== false || stripos($p['name'], $search) !== false;
-    });
+    $where[] = "(brand LIKE ? OR name LIKE ?)";
+    $types .= "ss";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
 }
+
+$whereSql = $where ? "WHERE " . implode(" AND ", $where) : "";
+$sql = "SELECT * FROM products $whereSql";
+$stmt = $mysqli->prepare($sql);
+
+// Bind params if any
+if ($params) {
+    $stmt->bind_param($types, ...$params);
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
+$filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
+
 ?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta charset="UTF-8">
     <title>Swastecha Points Redemption Store</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
    <div class="top-bar">

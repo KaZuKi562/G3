@@ -1,107 +1,62 @@
 <?php
-$products = [
-    [
-        "brand" => "Apple",
-        "name" => "IPHONE 15 PRO 256GB",
-        "price" => "₱63,990",
-        "points" => "80,000 P",
-        "getpoints" => "GET 35,000 P",
-        "img" => "img/iphone15pro_white.PNG"
-    ],
-    [
-        "brand" => "Apple",
-        "name" => "IPHONE 13 128GB",
-        "price" => "₱31,005",
-        "points" => "50,000 P",
-        "getpoints" => "GET 15,000 P",
-        "img" => "img/iPhone13_Midnight.png"
-    ],
-    [
-        "brand" => "Infinix",
-        "name" => "INFINIX NOTE 50 PRO 4G",
-        "price" => "₱10,199",
-        "points" => "18,000 P",
-        "getpoints" => "GET 6,000 P",
-        "img" => "img/infinix_note_50.png"
-    ],
-    [
-        "brand" => "Infinix",
-        "name" => "INFINIX GT 30 PRO",
-        "price" => "₱14,199",
-        "points" => "22,000 P",
-        "getpoints" => "GET 8,000 P",
-        "img" => "img/infinix_gt_30.png"
-    ],
-    [
-        "brand" => "Realme",
-        "name" => "REALME 14 PRO+ 5G (12GB + 512GB)",
-        "price" => "₱23,990",
-        "points" => "89,000 P",
-        "getpoints" => "GET 25,000 P",
-        "img" => "img/realme_14.png"
-    ],
-    [
-        "brand" => "Realme",
-        "name" => "REALME 15 PRO 5G (12GB + 256GB)",
-        "price" => "₱27,990",
-        "points" => "40,000 P",
-        "getpoints" => "GET 20,000 P",
-        "img" => "img/realme_15_pro.png"
-    ],
-    [
-        "brand" => "INFINIX",
-        "name" => "INFINIX HOT 50i",
-        "price" => "₱4,499",
-        "points" => "3,000 P",
-        "getpoints" => "GET 1,500 P",
-        "img" => "img/infinix-hot-50i.png"
-    ],
+include "db_connect.php";
 
-];
-// Convert price from "₱31,005" to numeric 31005 for comparison
 function parsePrice($price) {
     return (int) str_replace(['₱', ',', ' '], '', $price);
 }
 
-// ======= FILTERING LOGIC =======
+$where = [];
+$params = [];
+$types = "";
 
-// Start with all products
-$filteredProducts = $products;
-
-// Apply brand filter if set
+//  Brand filter 
 if (!empty($_GET['brand'])) {
     $brands = $_GET['brand'];
-    $filteredProducts = array_filter($filteredProducts, function($p) use ($brands) {
-        return in_array($p['brand'], $brands);
-    });
+    $in = implode(',', array_fill(0, count($brands), '?'));
+    $where[] = "brand IN ($in)";
+    $types .= str_repeat('s', count($brands));
+    $params = array_merge($params, $brands);
 }
 
-// Apply price filter if set
+// price filter 
+$priceFilterSql = [];
 if (!empty($_GET['price'])) {
-    $priceFilters = $_GET['price'];
-    $filteredProducts = array_filter($filteredProducts, function($p) use ($priceFilters) {
-        $price = parsePrice($p['price']);
-        foreach ($priceFilters as $filter) {
-            if (
-                ($filter === 'under10k' && $price < 10000) ||
-                ($filter === '10k30k' && $price >= 10000 && $price <= 30000) ||
-                ($filter === 'above50k' && $price > 50000)
-            ) {
-                return true;
-            }
+    foreach ($_GET['price'] as $filter) {
+        if ($filter === 'under10k') {
+            $priceFilterSql[] = "(CAST(REPLACE(REPLACE(REPLACE(price, '₱', ''), ',', ''), ' ', '') AS UNSIGNED) < 10000)";
+        } elseif ($filter === '10k30k') {
+            $priceFilterSql[] = "(CAST(REPLACE(REPLACE(REPLACE(price, '₱', ''), ',', ''), ' ', '') AS UNSIGNED) BETWEEN 10000 AND 30000)";
+        } elseif ($filter === 'above50k') {
+            $priceFilterSql[] = "(CAST(REPLACE(REPLACE(REPLACE(price, '₱', ''), ',', ''), ' ', '') AS UNSIGNED) > 50000)";
         }
-        return false;
-    });
+    }
+    if ($priceFilterSql) {
+        $where[] = '(' . implode(' OR ', $priceFilterSql) . ')';
+    }
 }
 
-// Apply search filter if set
+// --- search filter ---
 $search = '';
 if (isset($_GET['search']) && trim($_GET['search']) !== '') {
     $search = trim($_GET['search']);
-    $filteredProducts = array_filter($filteredProducts, function($p) use ($search) {
-        return stripos($p['brand'], $search) !== false || stripos($p['name'], $search) !== false;
-    });
+    $where[] = "(brand LIKE ? OR name LIKE ?)";
+    $types .= "ss";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
 }
+
+$whereSql = $where ? "WHERE " . implode(" AND ", $where) : "";
+$sql = "SELECT * FROM products $whereSql";
+$stmt = $conn->prepare($sql);
+
+if ($params) {
+    $stmt->bind_param($types, ...$params);
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
+$filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -109,7 +64,7 @@ if (isset($_GET['search']) && trim($_GET['search']) !== '') {
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta charset="UTF-8">
     <title>Swastecha Points Redemption Store</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
    <div class="top-bar">
@@ -117,7 +72,6 @@ if (isset($_GET['search']) && trim($_GET['search']) !== '') {
        <div class="search-bar">
             <form method="get" action="">
                 <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search">
-                <!-- Keep all filter values in the search form so they stay checked when searching -->
                 <?php
                 if (!empty($_GET['brand'])) {
                     foreach ($_GET['brand'] as $b) {
@@ -133,18 +87,89 @@ if (isset($_GET['search']) && trim($_GET['search']) !== '') {
                 <button type="submit">Search</button>
             </form>
         </div>
-       <div class="user-cart">
-            <a href="cart.html">
-                <img src="icon/cart.png" alt="Cart" class="icon">
-            </a>
-            <a href="user.html">
-                <img src="icon/user.png" alt="User" class="icon">
-            </a>
+        <div class="user-cart" style="position:relative;">
+                <a href="javascript:void(0);" id="cartIcon">
+                        <img src="icon/cart.png" alt="Cart" class="icon">
+                        <span class="cart-badge2" id="cartBadge">0</span>
+                    <a href="user.php">
+                        <img src="icon/user.png" alt="User" class="icon">
+                    </a>
+                </a>
         </div>
     </div>
 
+    <!-- Cart Modal -->
+    <div class="cart-modal" id="cartModal">
+        <div class="cart-popup">
+            <button class="close-btn" id="closeCart">&times;</button>
+            <div id="cartItems"></div>
+            <div class="cart-summary" id="cartSummary"></div>
+            <button class="checkout-btn" >Checkout</button>
+        </div>
+    </div>
+
+    <!-- BUY NOW MODAL -->
+<div class="buy-modal" id="buyModal">
+  <div class="buy-content">
+    <button class="close-btn" id="closeBuyModal">&times;</button>
+
+    <!-- PRODUCT INFO SECTION -->
+    <div class="buy-header">
+      <img id="productImage" src="" alt="Product Image" class="buy-img">
+      <div class="buy-info">
+        <h3 id="productName"></h3>
+        <p id="productBrand"></p>
+        <p id="productPrice"></p>
+        <p id="productPoints"></p>
+        <p id="productGetPoints"></p>
+
+        <div class="quantity-control">
+          <button id="qtyMinus">−</button>
+          <span id="qtyValue">1</span>
+          <button id="qtyPlus">+</button>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SPECS SECTION -->
+    <ul class="specs">
+      <li><strong>Processor:</strong> <span id="specProcessor"></span></li>
+      <li><strong>OS:</strong> <span id="specOS"></span></li>
+      <li><strong>Resolution:</strong> <span id="specResolution"></span></li>
+      <li><strong>Dimension:</strong> <span id="specDimension"></span></li>
+      <li><strong>Camera:</strong> <span id="specCamera"></span></li>
+      <li><strong>Battery:</strong> <span id="specBattery"></span></li>
+    </ul>
+
+<!-- OPTIONS -->
+<div class="option-group">
+    <label for="memorySelect"><strong>Memory:</strong></label>
+    <select id="memorySelect">
+        <option value="128" selected>128GB</option> 
+        <option value="256">256GB</option>
+    </select>
+</div>
+
+
+<!-- TOTALS SECTION -->
+    <div class="total-section">
+        <p><strong>Total Price:</strong> <span id="totalPrice">₱0</span></p>
+        <p><strong>Total Points:</strong> <span id="totalPoints">0 P</span></p>
+        <p><strong>Total Get Points:</strong> <span id="totalGetPoints">GET 0 P</span></p>
+    </div>
+
+<!-- ACTION BUTTONS -->
+    <div class="modal-actions product-cards">
+        <button id="addToCartBtn" class="buy-btn">Add to Cart</button>
+        <a id="buyNowLink" href="BuyNow.php"><button class="buyNowBtn">Buy now</button></a>
+    </div>
+  </div>
+</div>
+
     <nav class="tabs">
-        <a href="index.php">
+        <a href="main_home.php">
             <button class="tab">Home</button>
         </a>
         <a href="phone.php">
@@ -210,18 +235,32 @@ if (isset($_GET['search']) && trim($_GET['search']) !== '') {
     </aside>
 
         <section class="product-list" id="products">
-            <?php foreach($filteredProducts as $p): ?>
-            <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>">
-                <img src="<?= htmlspecialchars($p['img']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
-                <div class="product-title"><?= htmlspecialchars($p['name']) ?></div>
-                <div class="product-prices">
-                    <span><?= htmlspecialchars($p['price']) ?></span> <span><?= htmlspecialchars($p['points']) ?></span>
+                <?php foreach($filteredProducts as $p): ?>
+                <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>" class="product-card" 
+                     data-brand="<?= htmlspecialchars($p['brand']) ?>" 
+                     data-price="<?= htmlspecialchars($p['price']) ?>"
+                     data-name="<?= htmlspecialchars($p['name']) ?>"
+                     data-img="<?= htmlspecialchars($p['img']) ?>"
+                     data-points="<?= htmlspecialchars($p['points']) ?>"
+                     data-getpoints="<?= htmlspecialchars($p['getpoints']) ?>"
+                     data-processor="<?= htmlspecialchars($p['processor']) ?>"
+                     data-os="<?= htmlspecialchars($p['os']) ?>"
+                     data-resolution="<?= htmlspecialchars($p['resolution']) ?>"
+                     data-dimension="<?= htmlspecialchars($p['dimention']) ?>"
+                     data-camera="<?= htmlspecialchars($p['camera']) ?>"
+                     data-battery="<?= htmlspecialchars($p['battery']) ?>"
+                     data-product-id="<?= htmlspecialchars($p['id']) ?>">
+                    <img src="<?= htmlspecialchars($p['img']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
+                    <div class="product-title"><?= htmlspecialchars($p['name']) ?></div>
+                    <div class="product-prices">
+                        <span><?= htmlspecialchars($p['price']) ?></span> 
+                        <span><?= htmlspecialchars($p['points']) ?></span>
+                    </div>
+                    <div class="product-getpoints"><?= htmlspecialchars($p['getpoints']) ?></div>
+                    <button class="buy-btn">Buy now</button>
                 </div>
-                <div class="product-getpoints"><?= htmlspecialchars($p['getpoints']) ?></div>
-                <button class="buy-btn">Buy now</button>
-                <button class="cart-btn">Add to cart</button>
-            </div>
             <?php endforeach; ?>
+            
 
             <?php if (empty($filteredProducts)): ?>
             <p style="font-size:18px; color:#666;">No products found matching your filters.</p>
@@ -229,6 +268,7 @@ if (isset($_GET['search']) && trim($_GET['search']) !== '') {
         </section>
     </div>
 </div>
+
 <section class="features">
         <div>
             <img src="delivery.png" alt="">

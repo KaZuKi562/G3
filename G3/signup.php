@@ -4,11 +4,11 @@ include 'db_connect.php';
 $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];
-    $email = $_POST['email'];
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
 
-    // Check if email exists
+    // Check if email already exists in users table
     $check = $conn->prepare("SELECT * FROM users WHERE email = ?");
     $check->bind_param("s", $email);
     $check->execute();
@@ -17,15 +17,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($result->num_rows > 0) {
         $message = "Email already exists!";
     } else {
-        $stmt = $conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $username, $email, $password);
+        // Begin transaction to ensure both inserts succeed together
+        $conn->begin_transaction();
 
-        if ($stmt->execute()) {
-            $message = "Account created successfully! <a href='login.php'>Login</a>";
-        } else {
-            $message = "Error: " . $conn->error;
+        try {
+            // 1️⃣ Insert into users table
+            $stmt1 = $conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
+            $stmt1->bind_param("sss", $username, $email, $password);
+            $stmt1->execute();
+
+            // 2️⃣ Insert into account table
+            $stmt2 = $conn->prepare("INSERT INTO account (username, email, password) VALUES (?, ?, ?)");
+            $stmt2->bind_param("sss", $username, $email, $password);
+            $stmt2->execute();
+
+            // If both succeed, commit
+            $conn->commit();
+
+            // Close statements
+            $stmt1->close();
+            $stmt2->close();
+
+            // Redirect to login
+            header("Location: login.php");
+            exit();
+        } catch (Exception $e) {
+            // Rollback if there’s any error
+            $conn->rollback();
+            $message = "Error occurred during registration: " . $e->getMessage();
         }
     }
+
+    $check->close();
+    $conn->close();
 }
 ?>
 <!DOCTYPE html>
@@ -39,18 +63,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="form-container">
     <h2>Create your account</h2>
     <p>Please fill in the information below</p>
-
-    <form method="POST" action="login.php">
+    <?php if ($message): ?>
+        <div class="error"><?= htmlspecialchars($message) ?></div>
+    <?php endif; ?>
+    <form method="POST" action="">
         <input type="text" name="username" placeholder="Username" required>
         <input type="email" name="email" placeholder="Email" required>
         <input type="password" name="password" placeholder="Password" required>
         <button type="submit">Sign up</button>
     </form>
-
-    <?php if ($message): ?>
-        <p class="message"><?= $message ?></p>
-    <?php endif; ?>
-
     <p>Already have an account? <a href="login.php">Log in here</a></p>
 </div>
 </body>

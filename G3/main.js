@@ -1,63 +1,60 @@
 function showTab(tabName) {
-    // Highlight active tab
     document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
     document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
-    // For demo: In a real app, filter products by tab/category here
 }
-// Optionally: Add filter logic in JS for checkboxes/radios if desired
 
-// ====== ADS BANNER SLIDER ======
+
+//ads sliddder
 const track = document.querySelector('.ads-track');
 const dotsContainer = document.querySelector('.ads-dots');
-const slides = document.querySelectorAll('.ads-track img');
-let currentIndex = 0;
 
-// Create dots dynamically
-slides.forEach((_, i) => {
-  const dot = document.createElement('span');
-  dot.addEventListener('click', () => goToSlide(i));
-  dotsContainer.appendChild(dot);
-});
+if (track && dotsContainer) {
+    const slides = document.querySelectorAll('.ads-track img');
+    let currentIndex = 0;
 
-const dots = dotsContainer.querySelectorAll('span');
-updateDots();
+    slides.forEach((_, i) => {
+      const dot = document.createElement('span');
+      dot.addEventListener('click', () => goToSlide(i));
+      dotsContainer.appendChild(dot);
+    });
 
-// Function to move the track
-function goToSlide(index) {
-  currentIndex = index;
-  track.style.transform = `translateX(-${index * 100}%)`;
-  updateDots();
+    const dots = dotsContainer.querySelectorAll('span');
+    updateDots();
+
+    function goToSlide(index) {
+      currentIndex = index;
+      track.style.transform = `translateX(-${index * 100}%)`;
+      updateDots();
+    }
+
+    function updateDots() {
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentIndex);
+      });
+    }
+
+    let startX = 0;
+    track.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+    track.addEventListener('touchend', e => {
+      let endX = e.changedTouches[0].clientX;
+      if (endX < startX - 50) nextSlide(); 
+      if (endX > startX + 50) prevSlide(); 
+    });
+
+    function nextSlide() {
+      currentIndex = (currentIndex + 1) % slides.length;
+      goToSlide(currentIndex);
+    }
+    function prevSlide() {
+      currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+      goToSlide(currentIndex);
+    }
+
+    // Auto-slide every 4s
+    setInterval(nextSlide, 4000);
 }
 
-// Highlight the active dot
-function updateDots() {
-  dots.forEach((dot, i) => {
-    dot.classList.toggle('active', i === currentIndex);
-  });
-}
-
-// Swipe support (mobile gesture)
-let startX = 0;
-track.addEventListener('touchstart', e => startX = e.touches[0].clientX);
-track.addEventListener('touchend', e => {
-  let endX = e.changedTouches[0].clientX;
-  if (endX < startX - 50) nextSlide(); // swipe left
-  if (endX > startX + 50) prevSlide(); // swipe right
-});
-
-function nextSlide() {
-  currentIndex = (currentIndex + 1) % slides.length;
-  goToSlide(currentIndex);
-}
-function prevSlide() {
-  currentIndex = (currentIndex - 1 + slides.length) % slides.length;
-  goToSlide(currentIndex);
-}
-
-// Auto-slide every 4s
-setInterval(nextSlide, 4000);
-
-//page reload for filtering
+//filtering
 document.querySelectorAll('#filterForm input[type="checkbox"]').forEach(cb => {
   cb.addEventListener('change', () => {
     document.getElementById('filterForm').submit();
@@ -141,7 +138,6 @@ document.querySelectorAll('.cart-btn').forEach(btn => {
             qty: 1
         };
         let cart = getCart();
-        // If already in cart, just increment qty
         let found = cart.find(item => item.name === prod.name);
         if (found) found.qty++;
         else cart.push(prod);
@@ -150,14 +146,12 @@ document.querySelectorAll('.cart-btn').forEach(btn => {
     });
 });
 
-// Open/close cart modal
 document.getElementById('cartIcon').addEventListener('click', showCartModal);
 document.getElementById('closeCart').addEventListener('click', hideCartModal);
 document.getElementById('cartModal').addEventListener('click', function(e){
     if (e.target === this) hideCartModal();
 });
 
-// Cart popup button events (event delegation)
 document.getElementById('cartItems').addEventListener('click', function(e){
     const cart = getCart();
     const idx = e.target.closest('.cart-item') ? parseInt(e.target.closest('.cart-item').getAttribute('data-index')) : -1;
@@ -174,5 +168,168 @@ document.getElementById('cartItems').addEventListener('click', function(e){
     renderCartPopup();
 });
 
-// On page load
 updateCartBadge();
+
+
+let qty = 1;
+let basePrice = 0;
+let basePoints = 0;
+let baseGetPoints = 0;
+let currentProductId = null;
+
+document.querySelectorAll('.product-card > .buy-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const productCard = button.closest('.product-card');
+
+        // Store the product ID
+        currentProductId = productCard.dataset.productId;
+        document.getElementById('productImage').src = productCard.dataset.img;
+        document.getElementById('productBrand').textContent = productCard.dataset.brand;
+        document.getElementById('productPrice').textContent = `${productCard.dataset.price}`;
+        document.getElementById('productPoints').textContent = `${productCard.dataset.points} `;
+        document.getElementById('productGetPoints').textContent = `GET ${productCard.dataset.getpoints} `;
+        document.getElementById('specProcessor').textContent = productCard.dataset.processor;
+        document.getElementById('specOS').textContent = productCard.dataset.os;
+        document.getElementById('specResolution').textContent = productCard.dataset.resolution;
+        document.getElementById('specDimension').textContent = productCard.dataset.dimension;
+        document.getElementById('specCamera').textContent = productCard.dataset.camera;
+        document.getElementById('specBattery').textContent = productCard.dataset.battery;
+
+        // Base values
+        basePrice = parseInt(productCard.dataset.price.replace(/[₱,]/g, '')) || 0;
+        basePoints = parseInt(productCard.dataset.points.replace(/[^\d]/g, '')) || 0;
+        baseGetPoints = parseInt(productCard.dataset.getpoints.replace(/[^\d]/g, '')) || 0;
+
+        qty = 1;
+
+        document.getElementById('qtyValue').textContent = '1';
+
+        const memorySelect = document.getElementById('memorySelect');
+        memorySelect.value = '128';
+
+        updateTotals();
+
+        document.getElementById('buyModal').style.display = 'flex';
+    });
+});
+
+
+document.getElementById('closeBuyModal').addEventListener('click', () => {
+    document.getElementById('buyModal').style.display = 'none';
+});
+
+document.getElementById('qtyMinus').addEventListener('click', () => {
+    if (qty > 1) qty--;
+    document.getElementById('qtyValue').textContent = qty;
+    updateTotals();
+});
+
+document.getElementById('qtyPlus').addEventListener('click', () => {
+    qty++;
+    document.getElementById('qtyValue').textContent = qty;
+    updateTotals();
+});
+
+document.getElementById('memorySelect').addEventListener('change', updateTotals);
+
+
+function updateTotals() {
+    const memory = document.getElementById('memorySelect').value;
+
+    let price = basePrice;
+    let points = basePoints;
+    let getpoints = baseGetPoints;
+
+    if (memory === '256') {
+        price += 10000;
+        points += 7000;
+        getpoints += 4500;
+    }
+
+    const totalPrice = price * qty;
+    const totalPoints = points * qty;
+    const totalGetPoints = getpoints * qty;
+
+    document.getElementById('totalPrice').textContent = '₱' + totalPrice.toLocaleString();
+    document.getElementById('totalPoints').textContent = totalPoints.toLocaleString() + ' P';
+    document.getElementById('totalGetPoints').textContent = 'GET ' + totalGetPoints.toLocaleString() + ' P';
+
+    if (currentProductId) {
+        const buyNowLink = document.getElementById('buyNowLink');
+        buyNowLink.href = `BuyNow.php?` +
+                           `product_id=${currentProductId}` +
+                           `&final_price=${totalPrice}` +
+                           `&final_points=${totalPoints}` +
+                           `&final_getpoints=${totalGetPoints}` +
+                           `&qty=${qty}` +
+                           `&memory=${memory}`;
+    }
+}
+
+
+// Add to Cart button
+document.getElementById('addToCartBtn').addEventListener('click', function() {
+    const currentQty = parseInt(document.getElementById('qtyValue').textContent);
+    const selectedMemory = document.getElementById('memorySelect').value + 'GB';
+    
+    const finalPrice = document.getElementById('totalPrice').textContent;
+    const finalPoints = document.getElementById('totalPoints').textContent;
+    const finalGetPoints = document.getElementById('totalGetPoints').textContent;
+
+    const name = document.getElementById('productName').textContent;
+    const brand = document.getElementById('productBrand').textContent;
+    const img = document.getElementById('productImage').src;
+    
+    const unitPriceText = document.getElementById('totalPrice').textContent.replace('₱', '').replace(/,/g, '');
+    const unitPointsText = document.getElementById('totalPoints').textContent.replace('P', '').replace(/,/g, '').trim();
+    const unitGetPointsText = document.getElementById('totalGetPoints').textContent.replace('GET', '').replace('P', '').replace(/,/g, '').trim();
+
+    const unitPrice = (parseInt(unitPriceText) / currentQty) || 0;
+    const unitPoints = (parseInt(unitPointsText) / currentQty) || 0;
+    const unitGetPoints = (parseInt(unitGetPointsText) / currentQty) || 0;
+    
+    if (unitPrice === 0) {
+        alert("Please select a valid configuration before adding to cart.");
+        return;
+    }
+
+    const prod = {
+        name: `${name} (${selectedMemory})`, 
+        brand: brand,
+        price: '₱' + unitPrice.toLocaleString(),
+        points: unitPoints.toLocaleString() + ' P',
+        getpoints: 'GET ' + unitGetPoints.toLocaleString() + ' P',
+        img: img,
+        qty: currentQty
+    };
+
+    let cart = getCart();
+    
+    let found = cart.find(item => item.name === prod.name);
+    
+    if (found) {
+        found.qty += currentQty;
+    } else {
+        cart.push(prod);
+    }
+    
+    setCart(cart);
+    updateCartBadge(); 
+
+    alert(`${currentQty} × ${name} (${selectedMemory}) added to cart!`);
+
+    document.getElementById('buyModal').style.display = 'none';
+});
+
+document.getElementById('closeBuyModal').addEventListener('click', function() {
+    document.getElementById('buyModal').style.display = 'none';
+});
+
+
+const checkoutBtn = document.getElementById('checkoutBtn');
+if (checkoutBtn) {
+  checkoutBtn.addEventListener('click', function() {
+      window.location.href = 'checkout.php'; // Replace with your checkout page
+  });
+}
+

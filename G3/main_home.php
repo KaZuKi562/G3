@@ -1,100 +1,128 @@
 <?php
-// Sample data for products
-$products = [
-    [
-        "brand" => "Apple",
-        "name" => "IPHONE 15 PRO 256GB",
-        "price" => "₱63,990",
-        "points" => "80,000 P",
-        "getpoints" => "GET 35,000 P",
-        "img" => "img/iphone15pro_white.PNG"
-    ],
-    [
-        "brand" => "Apple",
-        "name" => "IPHONE 13 128GB",
-        "price" => "₱31,005",
-        "points" => "50,000 P",
-        "getpoints" => "GET 15,000 P",
-        "img" => "img/iPhone13_Midnight.png"
-    ],
-    [
-        "brand" => "Infinix",
-        "name" => "INFINIX NOTE 50 PRO 4G",
-        "price" => "₱10,199",
-        "points" => "18,000 P",
-        "getpoints" => "GET 6,000 P",
-        "img" => "img/infinix_note_50.png"
-    ],
-    [
-        "brand" => "Infinix",
-        "name" => "INFINIX GT 30 PRO",
-        "price" => "₱14,199",
-        "points" => "22,000 P",
-        "getpoints" => "GET 8,000 P",
-        "img" => "img/infinix_gt_30.png"
-    ],
-    [
-        "brand" => "Realme",
-        "name" => "REALME 14 PRO+ 5G (12GB + 512GB)",
-        "price" => "₱23,990",
-        "points" => "89,000 P",
-        "getpoints" => "GET 25,000 P",
-        "img" => "img/realme_14.png"
-    ],
-    [
-        "brand" => "Realme",
-        "name" => "REALME 15 PRO 5G (12GB + 256GB)",
-        "price" => "₱27,990",
-        "points" => "40,000 P",
-        "getpoints" => "GET 20,000 P",
-        "img" => "img/realme_15_pro.png"
-    ],
-    [
-        "brand" => "INFINIX",
-        "name" => "INFINIX HOT 50i",
-        "price" => "₱4,499",
-        "points" => "3,000 P",
-        "getpoints" => "GET 1,500 P",
-        "img" => "img/infinix-hot-50i.png"
-    ],
+include "db_connect.php";
+session_start();
 
-];
-
-// Search logic
 $search = '';
-$filtered_products = $products;
+$where = '';
+$params = [];
 if (isset($_GET['search']) && trim($_GET['search']) !== '') {
     $search = trim($_GET['search']);
-    $filtered_products = array_filter($products, function($p) use ($search) {
-        return stripos($p['brand'], $search) !== false || stripos($p['name'], $search) !== false;
-    });
+    $where = "WHERE brand LIKE ? OR name LIKE ?";
+    $search_param = "%$search%";
+    $params = [$search_param, $search_param];
 }
+
+$sql = "SELECT * FROM products $where";
+$stmt = $conn->prepare($sql);
+if ($where) {
+    $stmt->bind_param("ss", ...$params);
+}
+$stmt->execute();
+$result = $stmt->get_result();
+$filtered_products = $result->fetch_all(MYSQLI_ASSOC);
+
 ?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Swastecha Points Redemption Store</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
- <div class="top-bar">
+    <div class="top-bar">
         <div class="brand">Swastecha</div>
-        <div class="search-bar">
+            <div class="search-bar">
             <form method="get" action="">
                 <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search">
                 <button type="submit">Search</button>
             </form>
+            </div>
+            <div class="user-cart" style="position:relative;">
+                <a href="javascript:void(0);" id="cartIcon">
+                    <img src="icon/cart.png" alt="Cart" class="icon">
+                    <span class="cart-badge2" id="cartBadge">0</span>
+                    <a href="user.php">
+                    <img src="icon/user.png" alt="User" class="icon">
+                    </a>
+                </a>
+            </div>
         </div>
-        <div class="user-cart">
-            <a href="cart.html">
-                <img src="icon/cart.png" alt="Cart" class="icon">
-            </a>
-            <a href="user.html">
-                <img src="icon/user.png" alt="User" class="icon">
-            </a>
+
+     <!-- Cart Modal -->
+    <div class="cart-modal" id="cartModal">
+        <div class="cart-popup">
+            <button class="close-btn" id="closeCart">&times;</button>
+            <div id="cartItems"></div>
+            <div class="cart-summary" id="cartSummary"></div>
+            <button class="checkout-btn" >Checkout</button>
         </div>
     </div>
+
+<!-- BUY NOW MODAL -->
+<div class="buy-modal" id="buyModal">
+  <div class="buy-content">
+    <button class="close-btn" id="closeBuyModal">&times;</button>
+
+    <!-- PRODUCT INFO SECTION -->
+    <div class="buy-header">
+      <img id="productImage" src="" alt="Product Image" class="buy-img">
+      <div class="buy-info">
+        <h3 id="productName"></h3>
+        <p id="productBrand"></p>
+        <p id="productPrice"></p>
+        <p id="productPoints"></p>
+        <p id="productGetPoints"></p>
+
+        <div class="quantity-control">
+          <button id="qtyMinus">−</button>
+          <span id="qtyValue">1</span>
+          <button id="qtyPlus">+</button>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SPECS SECTION -->
+    <ul class="specs">
+      <li><strong>Processor:</strong> <span id="specProcessor"></span></li>
+      <li><strong>OS:</strong> <span id="specOS"></span></li>
+      <li><strong>Resolution:</strong> <span id="specResolution"></span></li>
+      <li><strong>Dimension:</strong> <span id="specDimension"></span></li>
+      <li><strong>Camera:</strong> <span id="specCamera"></span></li>
+      <li><strong>Battery:</strong> <span id="specBattery"></span></li>
+    </ul>
+
+<!-- OPTIONS -->
+<div class="option-group">
+    <label for="memorySelect"><strong>Memory:</strong></label>
+    <select id="memorySelect">
+        <option value="128" selected>128GB</option> 
+        <option value="256">256GB</option>
+    </select>
+</div>
+
+
+<!-- TOTALS SECTION -->
+    <div class="total-section">
+        <p><strong>Total Price:</strong> <span id="totalPrice">₱0</span></p>
+        <p><strong>Total Points:</strong> <span id="totalPoints">0 P</span></p>
+        <p><strong>Total Get Points:</strong> <span id="totalGetPoints">GET 0 P</span></p>
+    </div>
+
+<!-- ACTION BUTTONS -->
+    <div class="modal-actions product-cards">
+        <button id="addToCartBtn" class="buy-btn">Add to Cart</button>
+        <a id="buyNowLink" href="BuyNow.php"><button class="buyNowBtn">Buy now</button></a>
+    </div>
+  </div>
+</div>
+
+
+
 
     <div class="ads-banner">
         <div class="ads-track">
@@ -105,7 +133,7 @@ if (isset($_GET['search']) && trim($_GET['search']) !== '') {
     </div>
 
     <nav class="tabs">
-        <a href="main_home.php">
+        <a href="index.php">
             <button class="tab active">Home</button>
         </a>
         <a href="main_phone.php">
@@ -127,15 +155,28 @@ if (isset($_GET['search']) && trim($_GET['search']) !== '') {
                     <div style="padding:20px;text-align:center;">No products found.</div>
                 <?php else: ?>
                     <?php foreach($filtered_products as $p): ?>
-                    <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>">
+                    <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>" class="product-card" 
+                     data-brand="<?= htmlspecialchars($p['brand']) ?>" 
+                     data-price="<?= htmlspecialchars($p['price']) ?>"
+                     data-name="<?= htmlspecialchars($p['name']) ?>"
+                     data-img="<?= htmlspecialchars($p['img']) ?>"
+                     data-points="<?= htmlspecialchars($p['points']) ?>"
+                     data-getpoints="<?= htmlspecialchars($p['getpoints']) ?>"
+                     data-processor="<?= htmlspecialchars($p['processor']) ?>"
+                     data-os="<?= htmlspecialchars($p['os']) ?>"
+                     data-resolution="<?= htmlspecialchars($p['resolution']) ?>"
+                     data-dimension="<?= htmlspecialchars($p['dimention']) ?>"
+                     data-camera="<?= htmlspecialchars($p['camera']) ?>"
+                     data-battery="<?= htmlspecialchars($p['battery']) ?>"
+                     data-product-id="<?= htmlspecialchars($p['id']) ?>">
                         <img src="<?= htmlspecialchars($p['img']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
                         <div class="product-title"><?= htmlspecialchars($p['name']) ?></div>
                         <div class="product-prices">
                             <span><?= htmlspecialchars($p['price']) ?></span> <span><?= htmlspecialchars($p['points']) ?></span>
                         </div>
                         <div class="product-getpoints"><?= htmlspecialchars($p['getpoints']) ?></div>
-                        <button class="buy-btn">Buy now</button>
-                        <button class="cart-btn">Add to cart</button>
+                        <button class="buy-btn" >Buy now</button>
+
                     </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
