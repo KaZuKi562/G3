@@ -168,7 +168,8 @@ $filtered_products = $result->fetch_all(MYSQLI_ASSOC);
                      data-camera="<?= htmlspecialchars($p['camera']) ?>"
                      data-battery="<?= htmlspecialchars($p['battery']) ?>">
                         <img src="<?= htmlspecialchars($p['img']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
-                        <div class="product-title"><?= htmlspecialchars($p['name']) ?></div>
+                        <div class="product-title">
+                            <?= htmlspecialchars($p['name']) ?></div>
                         <div class="product-prices">
                             <span><?= htmlspecialchars($p['price']) ?></span> <span><?= htmlspecialchars($p['points']) ?></span>
                         </div>

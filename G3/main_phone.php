@@ -89,10 +89,10 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
         </div>
         <div class="user-cart" style="position:relative;">
                 <a href="javascript:void(0);" id="cartIcon">
-                        <img src="icon/cart.png" alt="Cart" class="icon">
-                        <span class="cart-badge2" id="cartBadge">0</span>
-                    <a href="user.php">
-                        <img src="icon/user.png" alt="User" class="icon">
+                    <img src="icon/cart.png" alt="Cart" class="icon">
+                    <span class="cart-badge2" id="cartBadge">0</span>
+                <a href="user.php">
+                    <img src="icon/user.png" alt="User" class="icon">
                     </a>
                 </a>
         </div>

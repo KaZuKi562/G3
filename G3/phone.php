@@ -1,10 +1,6 @@
 <?php
-$mysqli = new mysqli("localhost", "root", "", "swastecha_db");
-if ($mysqli->connect_errno) {
-    die("Failed to connect: " . $mysqli->connect_error);
-}
+include "db_connect.php";
 
-// Convert price to numeric for filter matching
 function parsePrice($price) {
     return (int) str_replace(['₱', ',', ' '], '', $price);
 }
@@ -13,7 +9,7 @@ $where = [];
 $params = [];
 $types = "";
 
-// --- Brand filter (checkbox) ---
+//  Brand filter 
 if (!empty($_GET['brand'])) {
     $brands = $_GET['brand'];
     $in = implode(',', array_fill(0, count($brands), '?'));
@@ -22,7 +18,7 @@ if (!empty($_GET['brand'])) {
     $params = array_merge($params, $brands);
 }
 
-// --- Price filter (checkbox) ---
+// price filter 
 $priceFilterSql = [];
 if (!empty($_GET['price'])) {
     foreach ($_GET['price'] as $filter) {
@@ -39,7 +35,7 @@ if (!empty($_GET['price'])) {
     }
 }
 
-// --- Search filter ---
+// --- search filter ---
 $search = '';
 if (isset($_GET['search']) && trim($_GET['search']) !== '') {
     $search = trim($_GET['search']);
@@ -51,9 +47,8 @@ if (isset($_GET['search']) && trim($_GET['search']) !== '') {
 
 $whereSql = $where ? "WHERE " . implode(" AND ", $where) : "";
 $sql = "SELECT * FROM products $whereSql";
-$stmt = $mysqli->prepare($sql);
+$stmt = $conn->prepare($sql);
 
-// Bind params if any
 if ($params) {
     $stmt->bind_param($types, ...$params);
 }
@@ -63,8 +58,6 @@ $result = $stmt->get_result();
 $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
 
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -79,7 +72,6 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
        <div class="search-bar">
             <form method="get" action="">
                 <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search">
-                <!-- Keep all filter values in the search form so they stay checked when searching -->
                 <?php
                 if (!empty($_GET['brand'])) {
                     foreach ($_GET['brand'] as $b) {
@@ -95,15 +87,86 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
                 <button type="submit">Search</button>
             </form>
         </div>
-       <div class="user-cart">
-            <a href="cart.html">
+       <div class="user-cart" style="position:relative;">
+            <a href="javascript:void(0);" id="cartIcon">
                 <img src="icon/cart.png" alt="Cart" class="icon">
+                <span class="cart-badge" id="cartBadge">0</span>
             </a>
             <span><a href="login.php">Log In</a></span>
             <span>|</span>
             <span><a href="signup.php">Sign Up</a></span>
         </div>
     </div>
+
+    <!-- Cart Modal -->
+    <div class="cart-modal" id="cartModal">
+        <div class="cart-popup">
+            <button class="close-btn" id="closeCart">&times;</button>
+            <div id="cartItems"></div>
+            <div class="cart-summary" id="cartSummary"></div>
+            <button class="checkout-btn" >Checkout</button>
+        </div>
+    </div>
+
+    <!-- BUY NOW MODAL -->
+<div class="buy-modal" id="buyModal">
+  <div class="buy-content">
+    <button class="close-btn" id="closeBuyModal">&times;</button>
+
+    <!-- PRODUCT INFO SECTION -->
+    <div class="buy-header">
+      <img id="productImage" src="" alt="Product Image" class="buy-img">
+      <div class="buy-info">
+        <h3 id="productName"></h3>
+        <p id="productBrand"></p>
+        <p id="productPrice"></p>
+        <p id="productPoints"></p>
+        <p id="productGetPoints"></p>
+
+        <div class="quantity-control">
+          <button id="qtyMinus">−</button>
+          <span id="qtyValue">1</span>
+          <button id="qtyPlus">+</button>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- SPECS SECTION -->
+    <ul class="specs">
+      <li><strong>Processor:</strong> <span id="specProcessor"></span></li>
+      <li><strong>OS:</strong> <span id="specOS"></span></li>
+      <li><strong>Resolution:</strong> <span id="specResolution"></span></li>
+      <li><strong>Dimension:</strong> <span id="specDimension"></span></li>
+      <li><strong>Camera:</strong> <span id="specCamera"></span></li>
+      <li><strong>Battery:</strong> <span id="specBattery"></span></li>
+    </ul>
+
+<!-- OPTIONS -->
+<div class="option-group">
+    <label for="memorySelect"><strong>Memory:</strong></label>
+    <select id="memorySelect">
+        <option value="128" selected>128GB</option> 
+        <option value="256">256GB</option>
+    </select>
+</div>
+
+
+<!-- TOTALS SECTION -->
+    <div class="total-section">
+        <p><strong>Total Price:</strong> <span id="totalPrice">₱0</span></p>
+        <p><strong>Total Points:</strong> <span id="totalPoints">0 P</span></p>
+        <p><strong>Total Get Points:</strong> <span id="totalGetPoints">GET 0 P</span></p>
+    </div>
+
+<!-- ACTION BUTTONS -->
+    <div class="modal-actions product-cards">
+        <button id="addToCartBtn" class="buy-btn">Add to Cart</button>
+        <button class="buyNowBtn" onclick="window.location.href='login.php';">Login to buy</button>
+    </div>
+  </div>
+</div>
 
     <nav class="tabs">
         <a href="index.php">
@@ -172,18 +235,32 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
     </aside>
 
         <section class="product-list" id="products">
-            <?php foreach($filteredProducts as $p): ?>
-            <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>">
-                <img src="<?= htmlspecialchars($p['img']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
-                <div class="product-title"><?= htmlspecialchars($p['name']) ?></div>
-                <div class="product-prices">
-                    <span><?= htmlspecialchars($p['price']) ?></span> <span><?= htmlspecialchars($p['points']) ?></span>
+                <?php foreach($filteredProducts as $p): ?>
+                <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>" class="product-card" 
+                     data-brand="<?= htmlspecialchars($p['brand']) ?>" 
+                     data-price="<?= htmlspecialchars($p['price']) ?>"
+                     data-name="<?= htmlspecialchars($p['name']) ?>"
+                     data-img="<?= htmlspecialchars($p['img']) ?>"
+                     data-points="<?= htmlspecialchars($p['points']) ?>"
+                     data-getpoints="<?= htmlspecialchars($p['getpoints']) ?>"
+                     data-processor="<?= htmlspecialchars($p['processor']) ?>"
+                     data-os="<?= htmlspecialchars($p['os']) ?>"
+                     data-resolution="<?= htmlspecialchars($p['resolution']) ?>"
+                     data-dimension="<?= htmlspecialchars($p['dimention']) ?>"
+                     data-camera="<?= htmlspecialchars($p['camera']) ?>"
+                     data-battery="<?= htmlspecialchars($p['battery']) ?>"
+                     data-product-id="<?= htmlspecialchars($p['id']) ?>">
+                    <img src="<?= htmlspecialchars($p['img']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
+                    <div class="product-title"><?= htmlspecialchars($p['name']) ?></div>
+                    <div class="product-prices">
+                        <span><?= htmlspecialchars($p['price']) ?></span> 
+                        <span><?= htmlspecialchars($p['points']) ?></span>
+                    </div>
+                    <div class="product-getpoints"><?= htmlspecialchars($p['getpoints']) ?></div>
+                    <button class="buy-btn">Buy now</button>
                 </div>
-                <div class="product-getpoints"><?= htmlspecialchars($p['getpoints']) ?></div>
-                <button class="buy-btn">Buy now</button>
-                <button class="cart-btn">Add to cart</button>
-            </div>
             <?php endforeach; ?>
+            
 
             <?php if (empty($filteredProducts)): ?>
             <p style="font-size:18px; color:#666;">No products found matching your filters.</p>
@@ -191,6 +268,7 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
         </section>
     </div>
 </div>
+
 <section class="features">
         <div>
             <img src="delivery.png" alt="">
