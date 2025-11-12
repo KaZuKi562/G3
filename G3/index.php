@@ -288,23 +288,17 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
     <footer>
         <div class="footer-columns">
             <div>
-                <strong>3 Group</strong>
+                <strong>Swastecha</strong>
                 <ul>
                     <a href="about.php"><li>About Us</li></a>
-                    <li>Locations</li>
-                    <li>Terms of Service</li>
-                    <li>Refund Policy</li>
-                    <li>Corporate Sales</li>
-                    <li>Contact Us</li>
+                    <a href="contactus.php"><li>Contact Us</li></a>
                 </ul>
             </div>
             <div>
                 <strong>Policies</strong>
                 <ul>
-                    <li>Privacy Policy</li>
-                    <li>Terms and Condition</li>
-                    <li>FAQs</li>
-                    <li>Do not sell my personal information</li>
+                    <a href="privacy.php"><li>Privacy Policy</li></a>
+                    <a href="terms.php"><li>Terms and Condition</li></a>
                 </ul>
             </div>
             <div>

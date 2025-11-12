@@ -7,11 +7,11 @@ session_start();
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>About | Swastecha Points Redemption Store</title>
+    <title>Contact Us | Swastecha Points Redemption Store</title>
     <link rel="stylesheet" href="styles.css?v=2">
     <style>
-        /* Center rectangle styling */
-        .service-box {
+        /* Contact Page Layout */
+        .contact-container {
             max-width: 800px;
             margin: 130px auto;
             background: #d8d8d8ff;
@@ -21,33 +21,71 @@ session_start();
             text-align: center;
         }
 
-        .service-box h2 {
+        .contact-container h2 {
             font-size: 1.8rem;
             font-weight: bold;
             margin-bottom: 20px;
             color: #222;
         }
 
-        .service-box p {
+        .contact-container p {
             font-size: 1rem;
             color: #555;
-            line-height: 1.8;
-            text-align: justify;
+            line-height: 1.6;
+            margin-bottom: 30px;
         }
-         .service-box button {
-            background-color: #007BFF; /* Blue color */
-            color: #fff; /* White font */
-            font-size: 1.1rem; /* Slightly bigger */
+
+        /* Contact Form Styling */
+        form.contact-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        form.contact-form input,
+        form.contact-form textarea {
+            width: 100%;
+            max-width: 600px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: none;
+        }
+
+        form.contact-form textarea {
+            height: 120px;
+        }
+
+        /* Primary button (shared for Send Message and Home) */
+        .primary-btn {
+            background-color: #007BFF;
+            color: #fff;
+            font-size: 1.1rem;
             padding: 12px 28px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+            transition: background-color 0.3s ease, transform 0.15s ease;
         }
 
-        .service-box button:hover {
-            background-color: #0056b3; /* Darker blue on hover */
-            transform: scale(1.05);
+        .primary-btn:hover {
+            background-color: #0056b3;
+            transform: scale(1.03);
+        }
+
+        /* Give the Home button a bit more top margin */
+        .home-btn {
+            margin-top: 25px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .contact-container {
+                margin: 100px 20px;
+                padding: 30px;
+            }
         }
     </style>
 </head>
@@ -72,44 +110,37 @@ session_start();
         </div>
     </div>
 
-    <!-- Cart Modal -->
-    <div class="cart-modal" id="cartModal">
-        <div class="cart-popup">
-            <button class="close-btn" id="closeCart">&times;</button>
-            <div id="cartItems"></div>
-            <div class="cart-summary" id="cartSummary"></div>
-            <button class="checkout-btn" onclick="window.location.href='login.php';">Login to Checkout</button>
-        </div>
-    </div>
-
-    <!-- Ads Banner -->
-    <div class="ads-banner">
-        <div class="ads-track">
-            <img src="ads/ad.png" alt="Ad 0">
-            <img src="ads/ad1.png" alt="Ad 1">
-        </div>
-        <div class="ads-dots"></div>
-    </div>
-
     <!-- Main Content -->
     <div class="main-container">
         <div class="content">
-            <div class="service-box">
-                <h2>Service</h2>
+            <div class="contact-container">
+                <h2>Contact Us</h2>
                 <p>
-                    Swasteche Center also operates Phone Authorized and Premium Service Providers that give the best repair 
-                    and maintenance services. As one of the Phone shop Providers in the Philippines, our Phone Certified 
-                    Technicians and friendly customer service officers are always ready to provide you with great advice and 
-                    technical support to get you and your Phone back up and running. You can go to our service center located in
-                    Jenra Dau Mabalacat Pampanga.
+                    Have a question, feedback, or need assistance?  
+                    Our friendly team is here to help you. Fill out the form below and we’ll get back to you as soon as possible!
                 </p>
-                <button onclick="window.location.href='index.php'">Home</button>
+
+                <form class="contact-form" method="post" action="#">
+                    <input type="text" name="name" placeholder="Your Name" required>
+                    <input type="email" name="email" placeholder="Your Email" required>
+                    <input type="text" name="subject" placeholder="Subject" required>
+                    <textarea name="message" placeholder="Your Message" required></textarea>
+                    <button type="submit" class="primary-btn">Send Message</button>
+                </form>
+
+                <div style="margin-top:30px; color:#444;">
+                    <p><strong>Address:</strong> Jenra Dau, Mabalacat, Pampanga</p>
+                    <p><strong>Phone:</strong> +63 912 345 6789</p>
+                    <p><strong>Email:</strong> support@swastecha.com</p>
+                </div>
+
+                <button class="primary-btn home-btn" onclick="window.location.href='index.php'">Home</button>
             </div>
         </div>
     </div>
 
-    <!--Footer-->
-<section class="features">
+    <!-- Footer -->
+    <section class="features">
         <div>
             <img src="delivery.png" alt="">
             <span>Delivery</span>
@@ -154,14 +185,6 @@ session_start();
         </div>
     </footer>
 
-    <script>
-document.querySelectorAll('#filterForm input[type="checkbox"]').forEach(cb => {
-  cb.addEventListener('change', () => {
-    document.getElementById('filterForm').submit();
-  });
-});
-
-</script>
     <script src="main.js"></script>
 </body>
 </html>

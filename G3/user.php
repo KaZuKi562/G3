@@ -91,34 +91,23 @@ if ($user_id) {
     <footer>
         <div class="footer-columns">
             <div>
-                <strong>3 Group</strong>
+                <strong>Swastecha</strong>
                 <ul>
-                    <li>Customer Support</li>
-                    <li>Store Locations</li>
-                    <li>Terms of Service</li>
-                    <li>Refund Policy</li>
-                    <li>Corporate Sales</li>
-                    <li>Contact Us</li>
+                    <li>Reliable online shop to purchase phones.</li>
                 </ul>
             </div>
             <div>
-                <strong>Policies</strong>
+                <strong>Contact</strong>
                 <ul>
-                    <li>Privacy Policy</li>
-                    <li>Terms and Condition</li>
-                    <li>Return and Exchange Policy</li>
-                    <li>FAQs</li>
-                    <li>Do not sell my personal information</li>
+                    <li>Email: support@swastecha.com</li>
+                    <li>Phone: +63 1234-567-7898</li>
                 </ul>
             </div>
             <div>
-                <strong>Product Categories</strong>
+                <strong>Follow Us</strong>
                 <ul>
-                    <li>Cellphone</li>
-                    <li>Tablet</li>
-                    <li>Headset</li>
-                    <li>Laptop</li>
-                    <li>Corporate Sales</li>
+                    <li>Facebook</li>
+                    <li>Instagram</li>
                 </ul>
             </div>
         </div>
