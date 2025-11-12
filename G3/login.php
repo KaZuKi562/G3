@@ -5,9 +5,18 @@ session_start();
 $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+    $email = trim($_POST['email']);
+    $password = trim($_POST['password']);
 
+    // ✅ Check for admin login first
+    if ($email === 'admin12@gmail.com' && $password === '12345') {
+        $_SESSION['user_id'] = 'admin';
+        $_SESSION['username'] = 'Administrator';
+        header("Location: admin.php"); // redirect to admin page
+        exit;
+    }
+
+    // Regular user login
     $stmt = $conn->prepare("SELECT user_id, username, password FROM account WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -28,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

@@ -46,7 +46,7 @@ if (isset($_GET['search']) && trim($_GET['search']) !== '') {
 }
 
 $whereSql = $where ? "WHERE " . implode(" AND ", $where) : "";
-$sql = "SELECT * FROM products $whereSql";
+$sql = "SELECT * FROM phone $whereSql";
 $stmt = $conn->prepare($sql);
 
 if ($params) {
@@ -77,7 +77,7 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
                     foreach ($_GET['brand'] as $b) {
                         echo '<input type="hidden" name="brand[]" value="' . htmlspecialchars($b) . '">';
                     }
-                }
+                } 
                 if (!empty($_GET['price'])) {
                     foreach ($_GET['price'] as $p) {
                         echo '<input type="hidden" name="price[]" value="' . htmlspecialchars($p) . '">';
@@ -89,10 +89,10 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
         </div>
         <div class="user-cart" style="position:relative;">
                 <a href="javascript:void(0);" id="cartIcon">
-                    <img src="icon/cart.png" alt="Cart" class="icon">
-                    <span class="cart-badge2" id="cartBadge">0</span>
-                <a href="user.php">
-                    <img src="icon/user.png" alt="User" class="icon">
+                        <img src="icon/cart.png" alt="Cart" class="icon">
+                        <span class="cart-badge2" id="cartBadge">0</span>
+                    <a href="user.php">
+                        <img src="icon/user.png" alt="User" class="icon">
                     </a>
                 </a>
         </div>
@@ -104,7 +104,7 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
             <button class="close-btn" id="closeCart">&times;</button>
             <div id="cartItems"></div>
             <div class="cart-summary" id="cartSummary"></div>
-            <button class="checkout-btn" >Checkout</button>
+            <button class="checkout-btn"  onclick="window.location.href='checkout.php';">Checkout</button>
         </div>
     </div>
 
@@ -172,10 +172,10 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
         <a href="main_home.php">
             <button class="tab">Home</button>
         </a>
-        <a href="phone.php">
+        <a href="main_phone.php">
             <button class="tab active">Cellphone</button>
         </a>
-        <a href="tablet.php">
+        <a href="main_tablet.php">
             <button class="tab">Tablet</button>
          </a>
         <a href="laptop.php">
@@ -237,6 +237,7 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
         <section class="product-list" id="products">
                 <?php foreach($filteredProducts as $p): ?>
                 <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>" class="product-card" 
+                     data-product-id="<?= htmlspecialchars($p['product_id']) ?>"
                      data-brand="<?= htmlspecialchars($p['brand']) ?>" 
                      data-price="<?= htmlspecialchars($p['price']) ?>"
                      data-name="<?= htmlspecialchars($p['name']) ?>"

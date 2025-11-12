@@ -1,10 +1,6 @@
 <?php
-$mysqli = new mysqli("localhost", "root", "", "swastecha_db");
-if ($mysqli->connect_errno) {
-    die("Failed to connect: " . $mysqli->connect_error);
-}
+include "db_connect.php";
 
-// Convert price to numeric for filter matching
 function parsePrice($price) {
     return (int) str_replace(['₱', ',', ' '], '', $price);
 }
@@ -13,7 +9,7 @@ $where = [];
 $params = [];
 $types = "";
 
-// --- Brand filter (checkbox) ---
+//  Brand filter 
 if (!empty($_GET['brand'])) {
     $brands = $_GET['brand'];
     $in = implode(',', array_fill(0, count($brands), '?'));
@@ -22,7 +18,7 @@ if (!empty($_GET['brand'])) {
     $params = array_merge($params, $brands);
 }
 
-// --- Price filter (checkbox) ---
+// price filter 
 $priceFilterSql = [];
 if (!empty($_GET['price'])) {
     foreach ($_GET['price'] as $filter) {
@@ -39,7 +35,7 @@ if (!empty($_GET['price'])) {
     }
 }
 
-// --- Search filter ---
+// --- search filter ---
 $search = '';
 if (isset($_GET['search']) && trim($_GET['search']) !== '') {
     $search = trim($_GET['search']);
@@ -50,10 +46,9 @@ if (isset($_GET['search']) && trim($_GET['search']) !== '') {
 }
 
 $whereSql = $where ? "WHERE " . implode(" AND ", $where) : "";
-$sql = "SELECT * FROM products $whereSql";
-$stmt = $mysqli->prepare($sql);
+$sql = "SELECT * FROM tablet $whereSql";
+$stmt = $conn->prepare($sql);
 
-// Bind params if any
 if ($params) {
     $stmt->bind_param($types, ...$params);
 }
@@ -63,8 +58,6 @@ $result = $stmt->get_result();
 $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
 
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -79,13 +72,12 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
        <div class="search-bar">
             <form method="get" action="">
                 <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search">
-                <!-- Keep all filter values in the search form so they stay checked when searching -->
                 <?php
                 if (!empty($_GET['brand'])) {
                     foreach ($_GET['brand'] as $b) {
                         echo '<input type="hidden" name="brand[]" value="' . htmlspecialchars($b) . '">';
                     }
-                }
+                } 
                 if (!empty($_GET['price'])) {
                     foreach ($_GET['price'] as $p) {
                         echo '<input type="hidden" name="price[]" value="' . htmlspecialchars($p) . '">';
@@ -95,24 +87,24 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
                 <button type="submit">Search</button>
             </form>
         </div>
-       <div class="user-cart">
-            <a href="javascript:void(0);" id="cartIcon">
+        <div class="user-cart" style="position:relative;">
+                <a href="javascript:void(0);" id="cartIcon">
                         <img src="icon/cart.png" alt="Cart" class="icon">
                         <span class="cart-badge2" id="cartBadge">0</span>
-            </a>
-            <span><a href="login.php">Log In</a></span>
-            <span>|</span>
-            <span><a href="signup.php">Sign Up</a></span>
+                    <a href="user.php">
+                        <img src="icon/user.png" alt="User" class="icon">
+                    </a>
+                </a>
         </div>
     </div>
 
-   <!-- Cart Modal -->
+    <!-- Cart Modal -->
     <div class="cart-modal" id="cartModal">
         <div class="cart-popup">
             <button class="close-btn" id="closeCart">&times;</button>
             <div id="cartItems"></div>
             <div class="cart-summary" id="cartSummary"></div>
-            <button class="checkout-btn" onclick="window.location.href='login.php';">Login to Checkout</button>
+            <button class="checkout-btn"  onclick="window.location.href='checkout.php';">Checkout</button>
         </div>
     </div>
 
@@ -171,20 +163,20 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
 <!-- ACTION BUTTONS -->
     <div class="modal-actions product-cards">
         <button id="addToCartBtn" class="buy-btn">Add to Cart</button>
-        <button class="buyNowBtn"  onclick="window.location.href='login.php';">Login to buy</button>
+        <a id="buyNowLink" href="BuyNow.php"><button class="buyNowBtn">Buy now</button></a>
     </div>
   </div>
 </div>
 
     <nav class="tabs">
-        <a href="index.php">
+        <a href="main_home.php">
             <button class="tab">Home</button>
         </a>
-        <a href="phone.php">
-            <button class="tab active">Cellphone</button>
+        <a href="main_phone.php">
+            <button class="tab">Cellphone</button>
         </a>
-        <a href="tablet.php">
-            <button class="tab">Tablet</button>
+        <a href="main_tablet.php">
+            <button class="tab active">Tablet</button>
          </a>
         <a href="laptop.php">
              <button class="tab">Laptop</button>
@@ -210,14 +202,9 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
                     <label for="apple">Apple</label>
                 </div>
                 <div>
-                    <input type="checkbox" name="brand[]" value="Infinix" id="infinix"
-                        <?= (isset($_GET['brand']) && in_array('Infinix', $_GET['brand'])) ? 'checked' : '' ?>>
-                    <label for="infinix">Infinix</label>
-                </div>
-                <div>
-                    <input type="checkbox" name="brand[]" value="Realme" id="realme"
-                        <?= (isset($_GET['brand']) && in_array('Realme', $_GET['brand'])) ? 'checked' : '' ?>>
-                    <label for="realme">Realme</label>
+                    <input type="checkbox" name="brand[]" value="lenovo" id="lenovo"
+                        <?= (isset($_GET['brand']) && in_array('lenovo', $_GET['brand'])) ? 'checked' : '' ?>>
+                    <label for="lenovo">Lenovo</label>
                 </div>
         </div>
         <hr>
@@ -265,7 +252,7 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
                         <span><?= htmlspecialchars($p['points']) ?></span>
                     </div>
                     <div class="product-getpoints"><?= htmlspecialchars($p['getpoints']) ?></div>
-                    <button class="buy-btn">Buy now</button>
+                    <button class="buy-btn">Buy now</button> 
                 </div>
             <?php endforeach; ?>
             

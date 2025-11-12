@@ -2,81 +2,124 @@
 include "db_connect.php";
 session_start();
 
-// Initialize variables 
+// Initialize default variables (only used if no product_id or fetch fails)
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
-$product_id = null;
 $product_name = "No Product Selected";
-$product_price = '0';
+$product_price = 0.0; 
 $product_points = '0 P';
 $product_getpoints = 'GET 0 P';
 $product_img = '';
 $quantity = 1;
-$memory = '128';
+$memory = '128'; 
+$product_id = null;
 
-$user = null;
-if ($user_id) {
-    include "db_connect.php";
+// Fetch product if product_id is provided
+if (isset($_GET['product_id'])) {
+    $product_id = intval($_GET['product_id']);
+    $sql = "SELECT * FROM phone WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $product_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $product = $result->fetch_assoc();
 
-$message = '';
-$message_type = '';
+    if ($product) {
+        // Set fetched values (no longer overridden below)
+        $product_name = htmlspecialchars($product['name']);
+        // Clean the VARCHAR price: remove ₱ and commas, then convert to float
+        $product_price = floatval(str_replace(['₱', ','], '', $product['price']));
+        $product_points = htmlspecialchars($product['points']);
+        $product_getpoints = htmlspecialchars($product['getpoints']);
+        $product_img = htmlspecialchars($product['img']);
+    } else {
+        // Keep defaults if fetch fails
+        $product_name = "Product Not Found";
+    }
+}
 
+
+// Fetch user data if logged in
+$user_current_points = 0;
 $current_address_detail = '';
 $current_postal_code = '';
 $current_phone_number = '';
-$user_data = null;
+if ($user_id) {
+    $sql_fetch = "SELECT user_address, user_number, getpoints FROM account WHERE user_id = ?";
+    $stmt_fetch = $conn->prepare($sql_fetch);
+    if ($stmt_fetch) {
+        $stmt_fetch->bind_param("i", $user_id);
+        $stmt_fetch->execute();
+        $result_fetch = $stmt_fetch->get_result();
+        $user_data = $result_fetch->fetch_assoc();
+        $stmt_fetch->close();
 
-// fetch the user id
-$sql_fetch = "SELECT user_address, user_number, getpoints FROM account WHERE user_id = ?";
-$stmt_fetch = $conn->prepare($sql_fetch);
-if ($stmt_fetch) {
-    $stmt_fetch->bind_param("i", $user_id);
-    $stmt_fetch->execute();
-    $result_fetch = $stmt_fetch->get_result();
-    $user_data = $result_fetch->fetch_assoc();
-    $stmt_fetch->close();
-
-    if ($user_data) {
-        $current_phone_number = htmlspecialchars($user_data['user_number']);
-        $user_current_points = intval($user_data['getpoints']);
-        $full_address = $user_data['user_address'];
-        
-        if (preg_match('/^(.*)\s\((?:Postal Code|PC):\s*(\w+)\)$/i', $full_address, $matches)) {
-            $current_address_detail = htmlspecialchars(trim($matches[1]));
-            $current_postal_code = htmlspecialchars($matches[2]);
-        } else {
-            $current_address_detail = htmlspecialchars($full_address);
+        if ($user_data) {
+            $current_phone_number = htmlspecialchars($user_data['user_number']);
+            $user_current_points = intval($user_data['getpoints']);
+            $full_address = $user_data['user_address'];
+            
+            if (preg_match('/^(.*)\s\((?:Postal Code|PC):\s*(\w+)\)$/i', $full_address, $matches)) {
+                $current_address_detail = htmlspecialchars(trim($matches[1]));
+                $current_postal_code = htmlspecialchars($matches[2]);
+            } else {
+                $current_address_detail = htmlspecialchars($full_address);
+            }
         }
     }
 }
-}
+
+// Handle points from POST (form submission)
 $points_to_get = 0;
 $points_to_use = 0;
-
-if (isset($_GET['final_getpoints'])) {
-    $points_to_get = intval(str_replace(',', '', $_GET['final_getpoints']));
+if (isset($_POST['final_points'])) {
+    $points_to_use = intval(str_replace(',', '', $_POST['final_points']));
 }
-if (isset($_GET['final_points'])) {
-    $points_to_use = intval(str_replace(',', '', $_GET['final_points']));
+if (isset($_POST['final_getpoints'])) {  // If needed for earning points
+    $points_to_get = intval(str_replace(',', '', $_POST['final_getpoints']));
 }
 
-//updating sql
+// Update quantity and memory from GET (likely set by JS)
+if (isset($_GET['qty'])) {
+    $quantity = intval($_GET['qty']);
+}
+if (isset($_GET['memory'])) {
+    $memory = htmlspecialchars($_GET['memory']); // Should be '128' or '256'
+}
+
+// Handle POST (checkout)
+$message = '';
+$message_type = '';
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $phone_number = htmlspecialchars($_POST['phone_number']);
     $address_detail = htmlspecialchars($_POST['address_detail']);
     $postal_code = htmlspecialchars($_POST['postal_code']);
     $payment_method = isset($_POST['payment_method']) ? $_POST['payment_method'] : null;
 
+    if (isset($_POST['quantity'])) {
+        $quantity = intval($_POST['quantity']);
+    } else {
+        $quantity = 1; 
+    }
+
+     if (isset($_POST['memory'])) {
+        $memory = htmlspecialchars($_POST['memory']); // Set to '128' or '256'
+    }
+
+    if (!$payment_method) {
+        $message = "Please select a payment method.";
+        $message_type = 'error';
+        goto end_post_logic;
+    }
+
     $full_address = $address_detail . ' (Postal Code: ' . $postal_code . ')';
     $checkout_success = false;
 
     if ($payment_method == 'point') {
-
+        // Using points
         if ($user_current_points >= $points_to_use && $points_to_use > 0) {
             $new_points_balance = $user_current_points - $points_to_use;
-
-            $sql_checkout = "UPDATE account SET points = ? WHERE user_id = ?";
+            $sql_checkout = "UPDATE account SET getpoints = ? WHERE user_id = ?";
             $stmt_checkout = $conn->prepare($sql_checkout);
-            
             if ($stmt_checkout) {
                 $stmt_checkout->bind_param("ii", $new_points_balance, $user_id);
                 if ($stmt_checkout->execute()) {
@@ -92,16 +135,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             $message = "You do not have enough points to purchase this item.";
             $message_type = 'error';
-            goto end_post_logic; 
+            goto end_post_logic;
         }
-
     } else {
+        // Cash on delivery or other
         if ($points_to_get > 0) {
             $new_points_balance = $user_current_points + $points_to_get;
-
             $sql_checkout = "UPDATE account SET getpoints = ? WHERE user_id = ?";
             $stmt_checkout = $conn->prepare($sql_checkout);
-            
             if ($stmt_checkout) {
                 $stmt_checkout->bind_param("ii", $new_points_balance, $user_id);
                 if ($stmt_checkout->execute()) {
@@ -110,7 +151,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $message_type = 'success';
                 } else {
                     $message = "Order placed, but error awarding points: " . $stmt_checkout->error;
-                    $checkout_success = true; 
+                    $checkout_success = true;
                     $message_type = 'warning';
                 }
                 $stmt_checkout->close();
@@ -122,84 +163,83 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    if ($checkout_success || $payment_method != 'point') { 
-        $full_address = $address_detail . ' (Postal Code: ' . $postal_code . ')';
+    // Update user address/phone if checkout succeeded
+    if ($checkout_success) {
         $sql_update = "UPDATE account SET user_address = ?, user_number = ? WHERE user_id = ?";
         $stmt_update = $conn->prepare($sql_update);
-
         if ($stmt_update) {
             $stmt_update->bind_param("ssi", $full_address, $phone_number, $user_id);
-            
             if (!$stmt_update->execute()) {
                 $message .= " (Error updating address: " . $stmt_update->error . ")";
-                $message_type = ($message_type == 'success' || $message_type == 'warning') ? 'warning' : 'error';
+                $message_type = 'warning';
             }
             $stmt_update->close();
+        }
+
+        // Insert into orders table
+        $order_sql = "INSERT INTO orders (
+            user_id, 
+            product_id, 
+            product_name, 
+            product_price, 
+            quantity, 
+            selected_memory, 
+            payment_method, 
+            address, 
+            phone_number, 
+            status, 
+            order_date
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())";
+
+        $stmt_order = $conn->prepare($order_sql);
+        if ($stmt_order) {
+            $stmt_order->bind_param(
+                "iisdiisss",
+                $user_id,
+                $product_id,
+                $product_name, // Now uses fetched value
+                $product_price, // Numeric value
+                $quantity,
+                $memory, // Uses selected memory (128 or 256)
+                $payment_method, // 'cashDelivery' or 'point'
+                $full_address,
+                $phone_number
+            );
+            if (!$stmt_order->execute()) {
+                $message .= " (Error saving order: " . $stmt_order->error . ")";
+                $message_type = 'warning';
+            }
+            $stmt_order->close();
         } else {
-            $message .= " (SQL Prepare Error for Address: " . $conn->error . ")";
-            $message_type = ($message_type == 'success' || $message_type == 'warning') ? 'warning' : 'error';
+            $message .= " (SQL Prepare Error for order insert: " . $conn->error . ")";
+            $message_type = 'warning';
         }
     }
 
-    if ($checkout_success || $message_type == 'error') {
-         header("Location: order.php?status=" . $message_type . "&message=" . urlencode($message));
-          exit(); 
-    }
-    
-    end_post_logic: ; 
+    // Redirect after processing
+    header("Location: order.php?status=" . $message_type . "&message=" . urlencode($message));
+    exit();
 
-} 
-if (isset($_GET['product_id'])) {
-    $product_id = intval($_GET['product_id']);
+    end_post_logic: ; // For goto on error
+}
 
-    $sql = "SELECT * FROM products WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $product_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $product = $result->fetch_assoc();
-
-    if ($product) {
-        $product_name = htmlspecialchars($product['name']);
-        $product_img = htmlspecialchars($product['img']);
-        $product_price = htmlspecialchars($product['price']);
-        $product_points = htmlspecialchars($product['points']);
-        $product_getpoints = htmlspecialchars($product['getpoints']);
-
-        if (isset($_GET['final_price'])) {
-            $final_price = number_format(floatval($_GET['final_price']), 0, '', ',');
-            $product_price = "₱" . $final_price;
-        }
-
-        if (isset($_GET['final_points'])) {
-            $final_points = number_format(floatval($_GET['final_points']), 0, '', ',');
-            $product_points = $final_points . " P";
-        }
-
-        if (isset($_GET['final_getpoints'])) {
-            $final_getpoints = number_format(floatval($_GET['final_getpoints']), 0, '', ',');
-            $product_getpoints = "GET " . $final_getpoints . " P";
-        }
-        
-        if (isset($_GET['qty'])) {
-            $quantity = intval($_GET['qty']);
-        }
-
-        if (isset($_GET['memory'])) {
-            $memory = htmlspecialchars($_GET['memory']);
-        }
-
-    } else {
-        $product_name = "Product Not Found";
-    }
-
-} else {
-    $product_id = null;
-    $product_name = "No Product Selected";
+// Prepare display values (for HTML, after any GET overrides)
+$display_price = htmlspecialchars($product['price'] ?? '₱0'); // Default if no product
+$display_points = $product_points;
+$display_getpoints = $product_getpoints;
+if (isset($_GET['final_price'])) {
+    $final_price = number_format(floatval($_GET['final_price']), 0, '', ',');
+    $display_price = "₱" . $final_price;
+}
+if (isset($_GET['final_points'])) {
+    $final_points = number_format(floatval($_GET['final_points']), 0, '', ',');
+    $display_points = $final_points . " P";
+}
+if (isset($_GET['final_getpoints'])) {
+    $final_getpoints = number_format(floatval($_GET['final_getpoints']), 0, '', ',');
+    $display_getpoints = "GET " . $final_getpoints . " P";
 }
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -245,7 +285,7 @@ if (isset($_GET['product_id'])) {
       <h2>My Cart</h2>
       <div class="cart-item">
         <div class="cart-product">
-          <?php if ($product): ?>
+          <?php if ($product_id && $product): ?>
             <img id="productImage" src="<?= $product_img ?>" alt="Product Image" class="buy-img">
             <p class="product-name">
               <strong>
@@ -254,32 +294,34 @@ if (isset($_GET['product_id'])) {
               </strong>
             </p>
             <p class="product-price">
-              <span id="totalPriceDisplay"><?= $product_price ?></span>
+              <span id="totalPriceDisplay"><?= $display_price ?></span>
             </p>
             <p class="product-getpoints">
-              <span id="totalGetPointsDisplay"><?= $product_getpoints ?></span>
+              <span id="totalGetPointsDisplay"><?= $display_getpoints ?></span>
             </p>
             <p class="product-points">
-              <span id="totalPointsDisplay"><?= $product_points ?></span>
+              <span id="totalPointsDisplay"><?= $display_points ?></span>
             </p>
-          <?php elseif (is_null($product)): ?>
-            <p>Invalid product ID.</p>
+          <?php else: ?>
+            <p>Invalid or no product selected.</p>
           <?php endif; ?>
         </div>
 
-        <div class="quantity-control">
-          
-          <span id="qtyValue">Qty <?= $quantity ?></span>
-
+        <div class="quantity-control">         
+            <span id="qtyValue">Qty<?= $quantity ?></span>
         </div>
-      </div>
 
     </div>
+</div>
 
     <div class="cart-right">
       <div class="total-box">
         <h3>Total</h3>
-        <p class="total-amount"><?= $product_price ?></p>
+        <div class="total-amount">
+            <span><?= $display_price ?></span>
+            <span><?= $display_points ?></span>
+        </div>
+        
 
         <div class="shipping-options">
           <p>Select an option</p>
@@ -294,8 +336,12 @@ if (isset($_GET['product_id'])) {
             <h4>Mabalacat City</h4>
             <p>Jenna Dau</p>
           </div>
-      <form action="" method="POST" onsubmit="return validatePoints(event);">
+      <form action="BuyNow.php?product_id=<?= $product_id ?>" method="POST">
       <div id="shippingFields" class="shippingFields">
+        <input type="hidden" name="quantity" id="quantityInput" value="<?= $quantity ?>">
+
+        <input type="hidden" name="final_points" id="finalPointsInput" value="">
+
         <input type="text" id="address_detail" name="address_detail" placeholder="Address" value="<?php echo $current_address_detail; ?>" required >
     
         <input type="tel" id="phone_number" name="phone_number" placeholder="Phone Number" value="<?php echo $current_phone_number; ?>" required>
@@ -304,22 +350,35 @@ if (isset($_GET['product_id'])) {
       </div>
 
     <div class="payment-methods">
-        <h4>Payment method</h4>
-        
-        <div class="method-option">
-            <input type="radio" id="cashDelivery" name="payment_method" value="cashDelivery" required>
-            <label for="cashDelivery">Cash on Delivery</label>
-        </div>
-        
-        <div class="method-option">
-            <input type="radio" id="point" name="payment_method" value="point" required>
-            <label for="point">Use points</label>
-        </div>
+    <h4>Payment method</h4>
+    
+    <div class="method-option">
+        <input type="radio" id="cashDelivery" name="payment_method" value="cashDelivery" required>
+        <label for="cashDelivery">Cash on Delivery</label>
     </div>
+    
+    <div class="method-option">
+        <input type="radio" id="point" name="payment_method" value="point" required>
+        <label for="point">Use points</label>
+    </div>
+</div>
 
-    <div class="points">
-        <p><?= $product_getpoints ?></p>
+<!-- NEW: Add memory selection here -->
+<div class="memory-options">
+    <h4>Select Memory</h4>
+    <div class="method-option">
+        <input type="radio" id="memory128" name="memory" value="128" <?= ($memory == '128') ? 'checked' : '' ?> required>
+        <label for="memory128">128GB</label>
     </div>
+    <div class="method-option">
+        <input type="radio" id="memory256" name="memory" value="256" <?= ($memory == '256') ? 'checked' : '' ?> required>
+        <label for="memory256">256GB</label>
+    </div>
+</div>
+
+<div class="points">
+    <p><?= $display_getpoints ?></p>
+</div>
     
     <input type="hidden" id="requiredPoints" value="<?= $points_to_use ?>"> 
     <input type="hidden" id="userPoints" value="<?= $user_current_points ?>"> 
@@ -333,3 +392,4 @@ if (isset($_GET['product_id'])) {
   <script src="buynow.js"></script>
 </body>
 </html>
+

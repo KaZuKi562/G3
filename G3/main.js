@@ -89,21 +89,27 @@ function renderCartPopup() {
         document.getElementById('cartSummary').innerHTML = '';
         return;
     }
+
     let html = '';
-    let totalPrice = 0, totalPoints = 0;
-    let totalGetPoints = 0;
+    let totalPrice = 0, totalPoints = 0, totalGetPoints = 0;
+
     cart.forEach((item, idx) => {
+        // ✅ Add this guard
+        if (!item.price || !item.points || !item.getpoints) return;
+
         const price = parseInt(item.price.replace(/[₱,]/g, '')) * item.qty;
         const points = parseInt(item.points.replace(/[, P]/g, '')) * item.qty;
         const getpoints = parseInt(item.getpoints.replace(/[GET ,P]/g, '')) * item.qty;
+
         totalPrice += price;
         totalPoints += points;
         totalGetPoints += getpoints;
+
         html += `
         <div class="cart-item" data-index="${idx}">
             <img src="${item.img}" alt="${item.name}">
             <div style="flex:1">
-                <div class="cart-item-title">${item.name} <br><small>${item.brand}</small></div>
+                <div class="cart-item-title">${item.name} (${item.memory}GB)<br><small>${item.brand}</small></div>
                 <div>${item.price} &nbsp; ${item.points}</div>
                 <div>${item.getpoints}</div>
                 <div class="cart-qty-group">
@@ -115,7 +121,8 @@ function renderCartPopup() {
             </div>
         </div>`;
     });
-    itemsDiv.innerHTML = html;
+
+    itemsDiv.innerHTML = html || "<p>Your cart is empty.</p>";
     document.getElementById('cartSummary').innerHTML = `
         <div><strong>Total</strong></div>
         <div>₱${totalPrice.toLocaleString()}</div>
@@ -123,6 +130,7 @@ function renderCartPopup() {
         <div>GET ${totalGetPoints.toLocaleString()} P</div>
     `;
 }
+
 
 // Handle Add to Cart
 document.querySelectorAll('.cart-btn').forEach(btn => {
@@ -181,8 +189,13 @@ document.querySelectorAll('.product-card > .buy-btn').forEach(button => {
     button.addEventListener('click', function() {
         const productCard = button.closest('.product-card');
 
-        // Store the product ID
+        // Store product ID
         currentProductId = productCard.dataset.productId;
+
+        // ✅ Initialize Buy Now link right away
+        const buyNowLink = document.getElementById('buyNowLink');
+        buyNowLink.href = "BuyNow.php?product_id=" + encodeURIComponent(currentProductId);
+
         document.getElementById('productImage').src = productCard.dataset.img;
         document.getElementById('productBrand').textContent = productCard.dataset.brand;
         document.getElementById('productPrice').textContent = `${productCard.dataset.price}`;
@@ -201,7 +214,6 @@ document.querySelectorAll('.product-card > .buy-btn').forEach(button => {
         baseGetPoints = parseInt(productCard.dataset.getpoints.replace(/[^\d]/g, '')) || 0;
 
         qty = 1;
-
         document.getElementById('qtyValue').textContent = '1';
 
         const memorySelect = document.getElementById('memorySelect');
@@ -214,9 +226,8 @@ document.querySelectorAll('.product-card > .buy-btn').forEach(button => {
 });
 
 
-document.getElementById('closeBuyModal').addEventListener('click', () => {
-    document.getElementById('buyModal').style.display = 'none';
-});
+
+
 
 document.getElementById('qtyMinus').addEventListener('click', () => {
     if (qty > 1) qty--;
@@ -270,32 +281,36 @@ function updateTotals() {
 // Add to Cart button
 document.getElementById('addToCartBtn').addEventListener('click', function() {
     const currentQty = parseInt(document.getElementById('qtyValue').textContent);
-    const selectedMemory = document.getElementById('memorySelect').value + 'GB';
-    
+    const selectedMemory = document.getElementById('memorySelect').value;
+
     const finalPrice = document.getElementById('totalPrice').textContent;
     const finalPoints = document.getElementById('totalPoints').textContent;
     const finalGetPoints = document.getElementById('totalGetPoints').textContent;
 
-    const name = document.getElementById('productName').textContent;
-    const brand = document.getElementById('productBrand').textContent;
+    const name = document.getElementById('productName').textContent.trim();
+    const brand = document.getElementById('productBrand').textContent.trim();
     const img = document.getElementById('productImage').src;
-    
-    const unitPriceText = document.getElementById('totalPrice').textContent.replace('₱', '').replace(/,/g, '');
-    const unitPointsText = document.getElementById('totalPoints').textContent.replace('P', '').replace(/,/g, '').trim();
-    const unitGetPointsText = document.getElementById('totalGetPoints').textContent.replace('GET', '').replace('P', '').replace(/,/g, '').trim();
+
+    const productCard = document.querySelector(`.product-card[data-name="${name}"][data-brand="${brand}"]`);
+
+    const unitPriceText = finalPrice.replace(/[₱,]/g, '');
+    const unitPointsText = finalPoints.replace(/[^\d]/g, '');
+    const unitGetPointsText = finalGetPoints.replace(/[^\d]/g, '');
 
     const unitPrice = (parseInt(unitPriceText) / currentQty) || 0;
     const unitPoints = (parseInt(unitPointsText) / currentQty) || 0;
     const unitGetPoints = (parseInt(unitGetPointsText) / currentQty) || 0;
-    
+
     if (unitPrice === 0) {
         alert("Please select a valid configuration before adding to cart.");
         return;
     }
 
     const prod = {
-        name: `${name} (${selectedMemory})`, 
+        id: currentProductId,           
+        name: name,
         brand: brand,
+        memory: selectedMemory,  
         price: '₱' + unitPrice.toLocaleString(),
         points: unitPoints.toLocaleString() + ' P',
         getpoints: 'GET ' + unitGetPoints.toLocaleString() + ' P',
@@ -304,22 +319,24 @@ document.getElementById('addToCartBtn').addEventListener('click', function() {
     };
 
     let cart = getCart();
-    
-    let found = cart.find(item => item.name === prod.name);
-    
+
+    let found = cart.find(item => item.id === prod.id && item.memory === prod.memory);
+
     if (found) {
         found.qty += currentQty;
     } else {
         cart.push(prod);
     }
-    
+
     setCart(cart);
-    updateCartBadge(); 
+    updateCartBadge();
 
-    alert(`${currentQty} × ${name} (${selectedMemory}) added to cart!`);
-
+    alert(`${currentQty} × ${name} (${selectedMemory}GB) added to cart!`);
     document.getElementById('buyModal').style.display = 'none';
 });
+
+
+
 
 document.getElementById('closeBuyModal').addEventListener('click', function() {
     document.getElementById('buyModal').style.display = 'none';

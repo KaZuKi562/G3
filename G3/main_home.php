@@ -1,25 +1,61 @@
 <?php
 include "db_connect.php";
-session_start();
 
-$search = '';
-$where = '';
+function parsePrice($price) {
+    return (int) str_replace(['₱', ',', ' '], '', $price);
+}
+
+$where = [];
 $params = [];
+$types = "";
+
+//  Brand filter 
+if (!empty($_GET['brand'])) {
+    $brands = $_GET['brand'];
+    $in = implode(',', array_fill(0, count($brands), '?'));
+    $where[] = "brand IN ($in)";
+    $types .= str_repeat('s', count($brands));
+    $params = array_merge($params, $brands);
+}
+
+// price filter 
+$priceFilterSql = [];
+if (!empty($_GET['price'])) {
+    foreach ($_GET['price'] as $filter) {
+        if ($filter === 'under10k') {
+            $priceFilterSql[] = "(CAST(REPLACE(REPLACE(REPLACE(price, '₱', ''), ',', ''), ' ', '') AS UNSIGNED) < 10000)";
+        } elseif ($filter === '10k30k') {
+            $priceFilterSql[] = "(CAST(REPLACE(REPLACE(REPLACE(price, '₱', ''), ',', ''), ' ', '') AS UNSIGNED) BETWEEN 10000 AND 30000)";
+        } elseif ($filter === 'above50k') {
+            $priceFilterSql[] = "(CAST(REPLACE(REPLACE(REPLACE(price, '₱', ''), ',', ''), ' ', '') AS UNSIGNED) > 50000)";
+        }
+    }
+    if ($priceFilterSql) {
+        $where[] = '(' . implode(' OR ', $priceFilterSql) . ')';
+    }
+}
+
+// --- search filter ---
+$search = '';
 if (isset($_GET['search']) && trim($_GET['search']) !== '') {
     $search = trim($_GET['search']);
-    $where = "WHERE brand LIKE ? OR name LIKE ?";
-    $search_param = "%$search%";
-    $params = [$search_param, $search_param];
+    $where[] = "(brand LIKE ? OR name LIKE ?)";
+    $types .= "ss";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
 }
 
-$sql = "SELECT * FROM products $where";
+$whereSql = $where ? "WHERE " . implode(" AND ", $where) : "";
+$sql = "SELECT * FROM phone $whereSql";
 $stmt = $conn->prepare($sql);
-if ($where) {
-    $stmt->bind_param("ss", ...$params);
+
+if ($params) {
+    $stmt->bind_param($types, ...$params);
 }
+
 $stmt->execute();
 $result = $stmt->get_result();
-$filtered_products = $result->fetch_all(MYSQLI_ASSOC);
+$filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
 
 ?>
 
@@ -37,9 +73,21 @@ $filtered_products = $result->fetch_all(MYSQLI_ASSOC);
             <div class="search-bar">
             <form method="get" action="">
                 <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="Search">
+                <?php
+                if (!empty($_GET['brand'])) {
+                    foreach ($_GET['brand'] as $b) {
+                        echo '<input type="hidden" name="brand[]" value="' . htmlspecialchars($b) . '">';
+                    }
+                } 
+                if (!empty($_GET['price'])) {
+                    foreach ($_GET['price'] as $p) {
+                        echo '<input type="hidden" name="price[]" value="' . htmlspecialchars($p) . '">';
+                    }
+                }
+                ?>
                 <button type="submit">Search</button>
             </form>
-            </div>
+        </div>
             <div class="user-cart" style="position:relative;">
                 <a href="javascript:void(0);" id="cartIcon">
                     <img src="icon/cart.png" alt="Cart" class="icon">
@@ -57,7 +105,7 @@ $filtered_products = $result->fetch_all(MYSQLI_ASSOC);
             <button class="close-btn" id="closeCart">&times;</button>
             <div id="cartItems"></div>
             <div class="cart-summary" id="cartSummary"></div>
-            <button class="checkout-btn" >Checkout</button>
+            <button class="checkout-btn"  onclick="window.location.href='checkout.php';">Checkout</button>
         </div>
     </div>
 
@@ -116,7 +164,9 @@ $filtered_products = $result->fetch_all(MYSQLI_ASSOC);
 <!-- ACTION BUTTONS -->
     <div class="modal-actions product-cards">
         <button id="addToCartBtn" class="buy-btn">Add to Cart</button>
-        <a id="buyNowLink" href="BuyNow.php"><button class="buyNowBtn">Buy now</button></a>
+        <a id="buyNowLink" href="#">
+            <button class="buyNowBtn">Buy now</button>
+        </a>
     </div>
   </div>
 </div>
@@ -132,30 +182,60 @@ $filtered_products = $result->fetch_all(MYSQLI_ASSOC);
         <div class="ads-dots"></div>
     </div>
 
-    <nav class="tabs">
-        <a href="index.php">
-            <button class="tab active">Home</button>
-        </a>
-        <a href="main_phone.php">
-            <button class="tab">Cellphone</button>
-        </a>
-        <a href="tablet.php">
-            <button class="tab">Tablet</button>
-         </a>
-        <a href="laptop.php">
-             <button class="tab">Laptop</button>
-        </a>
-    </nav>
-
     <div class="main-container">
-        
-        <div class="content">
-            <section class="product-list" id="products">
-                <?php if (empty($filtered_products)): ?>
-                    <div style="padding:20px;text-align:center;">No products found.</div>
-                <?php else: ?>
-                    <?php foreach($filtered_products as $p): ?>
-                    <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>" class="product-card" 
+        <header>
+        </header>
+    <div class="content">
+    <aside class="filters">
+    <h2>Filters</h2>
+    <form method="get" id="filterForm">
+        <!-- Keep search term in filter form so it stays in the search bar when filtering -->
+        <?php if ($search !== ''): ?>
+            <input type="hidden" name="search" value="<?= htmlspecialchars($search) ?>">
+        <?php endif; ?>
+        <div class="filter-group">
+            <strong>Brands</strong>
+                <div> 
+                    <input type="checkbox" name="brand[]" value="Apple" id="apple"
+                        <?= (isset($_GET['brand']) && in_array('Apple', $_GET['brand'])) ? 'checked' : '' ?>>
+                    <label for="apple">Apple</label>
+                </div>
+                <div>
+                    <input type="checkbox" name="brand[]" value="Infinix" id="infinix"
+                        <?= (isset($_GET['brand']) && in_array('Infinix', $_GET['brand'])) ? 'checked' : '' ?>>
+                    <label for="infinix">Infinix</label>
+                </div>
+                <div>
+                    <input type="checkbox" name="brand[]" value="Realme" id="realme"
+                        <?= (isset($_GET['brand']) && in_array('Realme', $_GET['brand'])) ? 'checked' : '' ?>>
+                    <label for="realme">Realme</label>
+                </div>
+        </div>
+        <hr>
+        <div class="filter-group">
+            <strong>Price</strong>
+                <div>
+                    <input type="checkbox" name="price[]" value="under10k" id="under10k"
+                        <?= (isset($_GET['price']) && in_array('under10k', $_GET['price'])) ? 'checked' : '' ?>>
+                    <label for="under10k">Under ₱10,000</label>
+                </div>
+                <div>
+                    <input type="checkbox" name="price[]" value="10k30k" id="10k30k"
+                        <?= (isset($_GET['price']) && in_array('10k30k', $_GET['price'])) ? 'checked' : '' ?>>
+                    <label for="10k30k">₱10,000 to ₱30,000</label>
+                </div>
+                <div>
+                    <input type="checkbox" name="price[]" value="above50k" id="above50k"
+                        <?= (isset($_GET['price']) && in_array('above50k', $_GET['price'])) ? 'checked' : '' ?>>
+                    <label for="above50k">Above ₱50,000</label>
+                </div>
+        </div>
+    </form>
+    </aside>
+
+        <section class="product-list" id="products">
+                <?php foreach($filteredProducts as $p): ?>
+                <div class="product-card" data-brand="<?= htmlspecialchars($p['brand']) ?>" data-price="<?= htmlspecialchars($p['price']) ?>" class="product-card" 
                      data-brand="<?= htmlspecialchars($p['brand']) ?>" 
                      data-price="<?= htmlspecialchars($p['price']) ?>"
                      data-name="<?= htmlspecialchars($p['name']) ?>"
@@ -168,77 +248,86 @@ $filtered_products = $result->fetch_all(MYSQLI_ASSOC);
                      data-dimension="<?= htmlspecialchars($p['dimention']) ?>"
                      data-camera="<?= htmlspecialchars($p['camera']) ?>"
                      data-battery="<?= htmlspecialchars($p['battery']) ?>"
-                     data-product-id="<?= htmlspecialchars($p['id']) ?>">
-                        <img src="<?= htmlspecialchars($p['img']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
-                        <div class="product-title"><?= htmlspecialchars($p['name']) ?></div>
-                        <div class="product-prices">
-                            <span><?= htmlspecialchars($p['price']) ?></span> <span><?= htmlspecialchars($p['points']) ?></span>
-                        </div>
-                        <div class="product-getpoints"><?= htmlspecialchars($p['getpoints']) ?></div>
-                        <button class="buy-btn" >Buy now</button>
-
+                     data-product-id="<?= htmlspecialchars($p['product_id']) ?>">
+                    <img src="<?= htmlspecialchars($p['img']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
+                    <div class="product-title"><?= htmlspecialchars($p['name']) ?></div>
+                    <div class="product-prices">
+                        <span><?= htmlspecialchars($p['price']) ?></span> 
+                        <span><?= htmlspecialchars($p['points']) ?></span>
                     </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </section>
-        </div>
-        
-    </div>
+                    <div class="product-getpoints"><?= htmlspecialchars($p['getpoints']) ?></div>
+                    <button class="buy-btn">Buy now</button>
+                </div>
+            <?php endforeach; ?>
+            
 
-    <section class="features">
-            <div>
-                <img src="delivery.png" alt="">
-                <span>Delivery</span>
-                <small>Delivery coverage around Pampanga</small>
-            </div>
-            <div>
-                <img src="payment.png" alt="">
-                <span>Secured Payment</span>
-                <small>Your payment information is processed securely</small>
-            </div>
-            <div>
-                <img src="support.png" alt="">
-                <span>Customer Support</span>
-                <small>Customer support to help you all the way</small>
-            </div>
+            <?php if (empty($filteredProducts)): ?>
+            <p style="font-size:18px; color:#666;">No products found matching your filters.</p>
+            <?php endif; ?>
         </section>
-        <footer>
-            <div class="footer-columns">
-                <div>
-                    <strong>3 Group</strong>
-                    <ul>
-                        <li>Customer Support</li>
-                        <li>Store Locations</li>
-                        <li>Terms of Service</li>
-                        <li>Refund Policy</li>
-                        <li>Corporate Sales</li>
-                        <li>Contact Us</li>
-                    </ul>
-                </div>
-                <div>
-                    <strong>Policies</strong>
-                    <ul>
-                        <li>Privacy Policy</li>
-                        <li>Terms and Condition</li>
-                        <li>Return and Exchange Policy</li>
-                        <li>FAQs</li>
-                        <li>Do not sell my personal information</li>
-                    </ul>
-                </div>
-                <div>
-                    <strong>Product Categories</strong>
-                    <ul>
-                        <li>Cellphone</li>
-                        <li>Tablet</li>
-                        <li>Headset</li>
-                        <li>Laptop</li>
-                        <li>Corporate Sales</li>
-                    </ul>
-                </div>
+    </div>
+</div>
+
+<section class="features">
+        <div>
+            <img src="delivery.png" alt="">
+            <span>Delivery</span>
+            <small>Delivery coverage around Pampanga</small>
+        </div>
+        <div>
+            <img src="payment.png" alt="">
+            <span>Secured Payment</span>
+            <small>Your payment information is processed securely</small>
+        </div>
+        <div>
+            <img src="support.png" alt="">
+            <span>Customer Support</span>
+            <small>Customer support to help you all the way</small>
+        </div>
+    </section>
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <strong>3 Group</strong>
+                <ul>
+                    <li>Customer Support</li>
+                    <li>Store Locations</li>
+                    <li>Terms of Service</li>
+                    <li>Refund Policy</li>
+                    <li>Corporate Sales</li>
+                    <li>Contact Us</li>
+                </ul>
             </div>
-        </footer>
+            <div>
+                <strong>Policies</strong>
+                <ul>
+                    <li>Privacy Policy</li>
+                    <li>Terms and Condition</li>
+                    <li>Return and Exchange Policy</li>
+                    <li>FAQs</li>
+                    <li>Do not sell my personal information</li>
+                </ul>
+            </div>
+            <div>
+                <strong>Product Categories</strong>
+                <ul>
+                    <li>Cellphone</li>
+                    <li>Tablet</li>
+                    <li>Headset</li>
+                    <li>Laptop</li>
+                    <li>Corporate Sales</li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+<script>
+document.querySelectorAll('#filterForm input[type="checkbox"]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    document.getElementById('filterForm').submit();
+  });
+});
+</script>
 
-
-    <script src="main.js"></script>
+<script src="main.js"></script>
 </body>
 </html>

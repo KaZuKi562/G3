@@ -48,9 +48,8 @@ if ($user_id) {
                 <a href="main_home.php">Home</a>
                 <a href="user.php">My Account</a>
                 <a href="address.php">My Address</a>
-                <a href="orders.php">My Orders</a>
-                <a href="reset-password.php">Reset Password</a>
-                <a href="logout.php">Logout</a>
+                <a href="myorder.php">My Orders</a>
+                <a href="index.php">Logout</a>
         </div>
     </aside>
 

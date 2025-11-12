@@ -54,8 +54,8 @@ $cart_item_count = 0;
 
             <h1>Order Placed</h1>
             
-            <a href="view_order_detail.php" class="view-order-btn">
-                View Order
+            <a href="main_home.php" class="view-order-btn">
+                Back Home
             </a>
         </div>
     </div>
