@@ -8,7 +8,7 @@ $user = null;
 if ($user_id) {
     include "db_connect.php";
 
-$sql = "SELECT user_id, username, email, user_address, user_number, getpoints FROM account WHERE user_id = ?";
+$sql = "SELECT user_id, username, email, user_address, postal_code, user_number, getpoints FROM account WHERE user_id = ?";
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     die("SQL Error: " . $conn->error);
@@ -123,8 +123,9 @@ if ($user && !empty(trim($user['user_address']))) {
                 <?php if ($user): ?>
             <div class="address-item">
             <p style="font-size: 25px;"><strong><?php echo htmlspecialchars($user['username']); ?></strong></p>
-             <p tyle="font-size: 20px;"><strong>Phone number: </strong> <?php echo htmlspecialchars($user['user_number']); ?></p>
+            <p tyle="font-size: 20px;"><strong>Phone number: </strong> <?php echo htmlspecialchars($user['user_number']); ?></p>
             <p tyle="font-size: 20px;"><strong>Address: </strong><?php echo htmlspecialchars($user['user_address']); ?></p>
+            <p tyle="font-size: 20px;"><strong>Postal code: </strong><?php echo htmlspecialchars($user['postal_code']); ?></p>
 
             <div class="button-container">
                 <button class="edit-btn" onclick="window.location.href='editAddress.php';">Edit</button>

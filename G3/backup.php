@@ -38,10 +38,12 @@ if ($user_id) {
 
 // POST handling
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // Ensure login
     if (!$user_id) {
         redirect_with_message('error', 'You must log in to checkout.');
     }
 
+    // Read posted totals & customer fields
     $points_to_get = isset($_POST['final_getpoints']) ? intval(str_replace(',', '', $_POST['final_getpoints'])) : 0;
     $points_to_use = isset($_POST['final_points']) ? intval(str_replace(',', '', $_POST['final_points'])) : 0;
     $phone_number = isset($_POST['phone_number']) ? clean($_POST['phone_number']) : '';
@@ -49,6 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $postal_code = isset($_POST['postal_code']) ? clean($_POST['postal_code']) : '';
     $payment_method = isset($_POST['payment_method']) ? clean($_POST['payment_method']) : null;
 
+    // Validate posted product arrays
     if (empty($_POST['product_id']) || !is_array($_POST['product_id'])) {
         redirect_with_message('error', 'No products selected.');
     }
@@ -57,47 +60,86 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $quantities = isset($_POST['quantity']) && is_array($_POST['quantity']) ? $_POST['quantity'] : array_fill(0, count($product_ids), 1);
     $memories = isset($_POST['memory']) && is_array($_POST['memory']) ? $_POST['memory'] : array_fill(0, count($product_ids), '128');
 
+    // Validate payment method
     if (!$payment_method) {
         redirect_with_message('error', 'Please select a payment method.');
     }
 
-    if ($payment_method === 'point' && ($points_to_use <= 0 || $user_current_points < $points_to_use)) {
-        redirect_with_message('error', 'You do not have enough points to complete this purchase.');
+    // If paying with points, ensure user has enough points (server-side)
+    if ($payment_method === 'point') {
+        if ($points_to_use <= 0) {
+            redirect_with_message('error', 'No points specified for payment.');
+        }
+        if ($user_current_points < $points_to_use) {
+            redirect_with_message('error', 'You do not have enough points to complete this purchase.');
+        }
     }
 
+    // Build full_address (separate columns in DB)
     $full_address = $address_detail;
+
+    // Start transaction
     $conn->begin_transaction();
 
     try {
+        // Insert each product into orders
         $insert_sql = "INSERT INTO orders (
             user_id, product_id, product_name, product_price, quantity, selected_memory,
             payment_method, address, phone_number, status, order_date
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())";
-        $stmt_order = $conn->prepare($insert_sql);
-        if (!$stmt_order) throw new Exception('Prepare failed (insert order): ' . $conn->error);
 
-        $select_product_sql = "SELECT id, name, price, getpoints, stock FROM phone WHERE id = ? FOR UPDATE";
-        $stmt_product = $conn->prepare($select_product_sql);
-        if (!$stmt_product) throw new Exception('Prepare failed (select product): ' . $conn->error);
+        if (!($stmt_order = $conn->prepare($insert_sql))) {
+            throw new Exception('Prepare failed (insert order): ' . $conn->error);
+        }
 
+        // We'll fetch product details from DB for each id (price & name).
+        $select_product_sql = "SELECT id, name, price, getpoints FROM products WHERE id = ?"; // your checkout used products table
+        if (!($stmt_product = $conn->prepare($select_product_sql))) {
+            $stmt_order->close();
+            throw new Exception('Prepare failed (select product): ' . $conn->error);
+        }
+
+        // Loop items
         for ($i = 0; $i < count($product_ids); $i++) {
             $pid = intval($product_ids[$i]);
             $qty = intval($quantities[$i]) > 0 ? intval($quantities[$i]) : 1;
             $mem = isset($memories[$i]) ? clean($memories[$i]) : '128';
 
-            $stmt_product->bind_param("i", $pid);
-            $stmt_product->execute();
-            $res = $stmt_product->get_result();
-            $prod = $res->fetch_assoc();
-            if (!$prod) throw new Exception("Product not found: $pid");
-            if ($qty > intval($prod['stock'])) throw new Exception("Insufficient stock for product: {$prod['name']}. Available: {$prod['stock']}");
+            // Fetch product (with stock)
+        $stmt_product->bind_param("i", $pid);
+        if (!$stmt_product->execute()) {
+            throw new Exception('Execute failed (select product): ' . $stmt_product->error);
+        }
+        $res = $stmt_product->get_result();
+        $prod = $res->fetch_assoc();
+        if (!$prod) continue;
 
+        $stock_check_sql = "SELECT stock FROM products WHERE id = ? FOR UPDATE";
+        if (!($stmt_stock = $conn->prepare($stock_check_sql))) {
+            throw new Exception("Prepare failed (stock check): " . $conn->error);
+        }
+        $stmt_stock->bind_param("i", $pid);
+        $stmt_stock->execute();
+        $stock_res = $stmt_stock->get_result();
+        $row_stock = $stock_res->fetch_assoc();
+        $stmt_stock->close();
+
+        $current_stock = intval($row_stock['stock']);
+        if ($qty > $current_stock) {
+            throw new Exception("Insufficient stock for product: {$prod['name']}. Available: {$current_stock}");
+        }
+
+            $pname = $prod['name'];
+            // Normalize price column (string like "₱12,000" or "12000")
             $price_numeric = floatval(str_replace([',','₱','PHP','php'], '', $prod['price']));
+
+            // Insert order row
+            // Bind types: i i s d i s s s s  => "iisdissss"? Actually: i,i,s,d,i,s,s,s,s -> "iisdissss"
             $stmt_order->bind_param(
                 "iisdissss",
                 $user_id,
                 $pid,
-                $prod['name'],
+                $pname,
                 $price_numeric,
                 $qty,
                 $mem,
@@ -105,44 +147,69 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $full_address,
                 $phone_number
             );
-            if (!$stmt_order->execute()) throw new Exception("Failed to insert order for product: {$prod['name']}");
 
-            $update_stock_sql = "UPDATE phone SET stock = stock - ? WHERE id = ?";
-            $stmt_stock = $conn->prepare($update_stock_sql);
-            $stmt_stock->bind_param("ii", $qty, $pid);
-            $stmt_stock->execute();
-            $stmt_stock->close();
+            if (!$stmt_order->execute()) {
+                throw new Exception('Execute failed (insert order): ' . $stmt_order->error);
+            }
         }
+        // Deduct stock AFTER inserting order
+        $update_stock_sql = "UPDATE phone SET stock = stock - ? WHERE id = ?";
+        if (!($stmt_update_stock = $conn->prepare($update_stock_sql))) {
+            throw new Exception("Prepare failed (stock deduct): " . $conn->error);
+        }
+        $stmt_update_stock->bind_param("ii", $qty, $pid);
 
-        $stmt_order->close();
+        if (!$stmt_update_stock->execute()) {
+            $stmt_update_stock->close();
+            throw new Exception("Execute failed (stock deduct): " . $stmt_update_stock->error);
+        }
+        $stmt_update_stock->close();
         $stmt_product->close();
+        $stmt_order->close();
 
         $new_points_balance = $user_current_points;
-        if ($payment_method === 'point') $new_points_balance -= $points_to_use;
-        $new_points_balance += $points_to_get;
+
+        if ($payment_method === 'point') {
+            // Deduct usage
+            $new_points_balance -= $points_to_use;
+        }
+
+        // Award getpoints (always on purchase)
+        if ($points_to_get > 0) {
+            $new_points_balance += $points_to_get;
+        }
+
+        // Ensure new_points_balance is not negative (extra safety)
         if ($new_points_balance < 0) $new_points_balance = 0;
 
         $update_acc_sql = "UPDATE account SET getpoints = ?, user_address = ?, postal_code = ?, user_number = ? WHERE user_id = ?";
-        $stmt_update = $conn->prepare($update_acc_sql);
+        if (!($stmt_update = $conn->prepare($update_acc_sql))) {
+            throw new Exception('Prepare failed (update account): ' . $conn->error);
+        }
         $stmt_update->bind_param("isssi", $new_points_balance, $address_detail, $postal_code, $phone_number, $user_id);
-        $stmt_update->execute();
+        if (!$stmt_update->execute()) {
+            $stmt_update->close();
+            throw new Exception('Execute failed (update account): ' . $stmt_update->error);
+        }
         $stmt_update->close();
 
+        // Commit transaction
         $conn->commit();
 
+        // Build message
         $msg = "Order placed successfully!";
-        if ($payment_method === 'point') $msg .= " Points used: " . number_format($points_to_use) . ".";
-        if ($points_to_get > 0) $msg .= " You earned " . number_format($points_to_get) . " points.";
+        if ($payment_method === 'point') {
+            $msg .= " Points used: " . number_format($points_to_use) . ".";
+        }
+        if ($points_to_get > 0) {
+            $msg .= " You earned " . number_format($points_to_get) . " points.";
+        }
 
-        // Use JavaScript to clear cart after successful purchase
-        echo "<script>
-            localStorage.removeItem('cart');
-            window.location.href='order.php?status=success&message=" . urlencode($msg) . "';
-        </script>";
-        exit;
+        redirect_with_message('success', $msg);
 
     } catch (Exception $e) {
         $conn->rollback();
+        // You can log $e->getMessage() to server logs here
         redirect_with_message('error', 'Checkout failed: ' . $e->getMessage());
     }
 }
@@ -158,15 +225,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 <body>
 <div class="top-bar">
-    <div class="brand">Swastecha</div>
-    <div class="search-bar"></div>
-    <div class="user-cart" style="position:relative;">
-        <a href="javascript:void(0);" id="cartIcon">
-            <img src="icon/cart.png" alt="Cart" class="icon">
-            <span class="cart-badge2" id="cartBadge">0</span>
-            <a href="user.php"><img src="icon/user.png" alt="User" class="icon"></a>
-        </a>
-    </div>
+    <div class="brand">Swastecha</div><div class="brand">Swastecha</div>
+            <div class="search-bar">
+            
+        </div>
+            <div class="user-cart" style="position:relative;">
+                <a href="javascript:void(0);" id="cartIcon">
+                    <img src="icon/cart.png" alt="Cart" class="icon">
+                    <span class="cart-badge2" id="cartBadge">0</span>
+                    <a href="user.php">
+                    <img src="icon/user.png" alt="User" class="icon">
+                    </a>
+                </a>
+            </div>
+        </div>
 </div>
 
 <div class="cart-container">
@@ -233,6 +305,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </div>
 
 <script>
+// Client-side: builds list from localStorage cart and sets totals
 function getCart() { return JSON.parse(localStorage.getItem('cart')) || []; }
 function formatPrice(num) { return '₱' + num.toLocaleString(); }
 function formatPoints(num) { return num.toLocaleString() + ' P'; }
@@ -264,16 +337,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
     let totalPrice = 0, totalPoints = 0, totalGetPoints = 0;
 
-    cart.forEach(item => {
+    cart.forEach(item=>{
         const qty = item.qty ? parseInt(item.qty) : 1;
         const price = parseFloat((item.price+"").replace(/[₱,]/g,'')) || 0;
         const points = parseInt((item.points+"").replace(/[^\d]/g,'')) || 0;
         const getPoints = parseInt((item.getpoints+"").replace(/[^\d]/g,'')) || 0;
 
-        totalPrice += price * qty;
-        totalPoints += points * qty;
-        totalGetPoints += getPoints * qty;
+        totalPrice += price*qty;
+        totalPoints += points*qty;
+        totalGetPoints += getPoints*qty;
 
+        // hidden inputs for each item
         form.insertAdjacentHTML('beforeend',`
             <input type="hidden" name="product_id[]" value="${item.id}">
             <input type="hidden" name="quantity[]" value="${qty}">
@@ -282,12 +356,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
         cartList.insertAdjacentHTML('beforeend',`
             <div class="cart-item">
-                <img src="${item.img}" alt="${item.brand}" class="buy-img">
-                <p><strong>${item.name || item.brand} ${item.memory}GB</strong></p>
-                <p>Qty: ${qty}</p>
-                <p>Price: ${formatPrice(price*qty)}</p>
-                <p>${formatGetPoints(getPoints*qty)}</p>
-                <p>Required Points: ${formatPoints(points*qty)}</p>
+                <img src="${item.img}" alt="${item.name}" class="buy-img">
+                <p><strong>${item.name} (${item.memory}GB)</strong></p>
+                <p>${formatPrice(price*qty)} | ${formatGetPoints(getPoints*qty)} | ${formatPoints(points*qty)}</p>
             </div>
         `);
     });
@@ -299,6 +370,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
     document.getElementById('finalPoints').value = totalPoints;
     document.getElementById('requiredPoints').value = totalPoints;
 });
+
+// Clear cart after redirect to order.php is handled elsewhere (your existing script)
+// Optionally uncomment to clear when navigating to order.php
+// if(window.location.href.includes("order.php")){ localStorage.removeItem('cart'); }
 </script>
 
 <script src="buynow.js"></script>

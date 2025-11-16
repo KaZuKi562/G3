@@ -225,10 +225,6 @@ document.querySelectorAll('.product-card > .buy-btn').forEach(button => {
     });
 });
 
-
-
-
-
 document.getElementById('qtyMinus').addEventListener('click', () => {
     if (qty > 1) qty--;
     document.getElementById('qtyValue').textContent = qty;
@@ -335,13 +331,9 @@ document.getElementById('addToCartBtn').addEventListener('click', function() {
     document.getElementById('buyModal').style.display = 'none';
 });
 
-
-
-
 document.getElementById('closeBuyModal').addEventListener('click', function() {
     document.getElementById('buyModal').style.display = 'none';
 });
-
 
 const checkoutBtn = document.getElementById('checkoutBtn');
 if (checkoutBtn) {

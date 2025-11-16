@@ -1,64 +1,53 @@
 <?php
 session_start();
-
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
-
-$user = null;
-if ($user_id) {
-    include "db_connect.php";
+include "db_connect.php";
 
 $message = '';
 $message_type = '';
+
 $current_address_detail = '';
 $current_postal_code = '';
 $current_phone_number = '';
-$user_data = null;
 
-$sql_fetch = "SELECT user_address, user_number FROM account WHERE user_id = ?";
-$stmt_fetch = $conn->prepare($sql_fetch);
-if ($stmt_fetch) {
-    $stmt_fetch->bind_param("i", $user_id);
-    $stmt_fetch->execute();
-    $result_fetch = $stmt_fetch->get_result();
-    $user_data = $result_fetch->fetch_assoc();
-    $stmt_fetch->close();
+// Redirect if user not logged in
+if (!$user_id) {
+    $message = "You must be logged in to edit your address.";
+    $message_type = 'error';
+} else {
+    // Fetch CURRENT ADDRESS DETAILS
+    $sql_fetch = "SELECT user_address, postal_code, user_number FROM account WHERE user_id = ?";
+    $stmt_fetch = $conn->prepare($sql_fetch);
 
-    if ($user_data) {
-        $current_phone_number = htmlspecialchars($user_data['user_number']);
-        $full_address = $user_data['user_address'];
-        if (preg_match('/^(.*)\s\((?:Postal Code|PC):\s*(\w+)\)$/i', $full_address, $matches)) {
-
-            $current_address_detail = htmlspecialchars(trim($matches[1]));
-            $current_postal_code = htmlspecialchars($matches[2]);
-        } else {
-            $current_address_detail = htmlspecialchars($full_address);
-        }
+    if ($stmt_fetch) {
+        $stmt_fetch->bind_param("i", $user_id);
+        $stmt_fetch->execute();
+        $stmt_fetch->bind_result($current_address_detail, $current_postal_code, $current_phone_number);
+        $stmt_fetch->fetch();
+        $stmt_fetch->close();
     }
 }
-}
 
+// Update Address
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $phone_number = htmlspecialchars($_POST['phone_number']);
     $address_detail = htmlspecialchars($_POST['address_detail']);
     $postal_code = htmlspecialchars($_POST['postal_code']);
-    $full_address = $address_detail . ' (Postal Code: ' . $postal_code . ')';
 
-    // Prepare the SQL UPDATE
-    $sql_update = "UPDATE account SET user_address = ?, user_number = ? WHERE user_id = ?";
+    $sql_update = "UPDATE account SET user_address = ?, postal_code = ?, user_number = ? WHERE user_id = ?";
     $stmt_update = $conn->prepare($sql_update);
 
     if ($stmt_update) {
-        $stmt_update->bind_param("ssi", $full_address, $phone_number, $user_id);
-        
+        $stmt_update->bind_param("sssi", $address_detail, $postal_code, $phone_number, $user_id);
+
         if ($stmt_update->execute()) {
-            $message = "Address updated successfully!";
-            $message_type = 'success';
             header("Location: address.php?status=success");
             exit();
         } else {
             $message = "Error updating address: " . $stmt_update->error;
             $message_type = 'error';
         }
+
         $stmt_update->close();
     } else {
         $message = "SQL Prepare Error: " . $conn->error;
@@ -68,6 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 $conn->close();
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">

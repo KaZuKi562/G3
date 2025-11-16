@@ -31,7 +31,7 @@ if (!isset($_GET['product_id'])) {
 
 $product_id = intval($_GET['product_id']);
 
-$sql = $conn->prepare("SELECT * FROM phone WHERE product_id = ?");
+$sql = $conn->prepare("SELECT * FROM products WHERE product_id = ?");
 $sql->bind_param("i", $product_id);
 $sql->execute();
 $product = $sql->get_result()->fetch_assoc();
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // --- Reduce stock ---
         $newStock = $stock - $quantity;
-        $updateStock = $conn->prepare("UPDATE phone SET stock = ? WHERE product_id = ?");
+        $updateStock = $conn->prepare("UPDATE products SET stock = ? WHERE product_id = ?");
         $updateStock->bind_param("ii", $newStock, $product_id);
         $updateStock->execute();
 
@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 user_id, product_id, product_name, product_price, quantity,
                 selected_memory, payment_method, shipping_method,
                 address, phone_number, status, order_date
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pre order', NOW())
         ");
 
         $insert->bind_param(
@@ -344,7 +344,7 @@ window.onload = updateAll;
         <!-- Payment -->
         <div class="section">
             <label>Payment Method</label><br><br>
-            <input type="radio" name="payment" value="cod" checked> Cash on Delivery <br>
+            <input type="radio" name="payment" value="CashDelivery" checked> Cash on Delivery <br>
             <input type="radio" name="payment" value="points"> Use Points
         </div>
 

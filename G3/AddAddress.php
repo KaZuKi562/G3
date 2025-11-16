@@ -3,47 +3,50 @@ session_start();
 
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
 
-$user = null;
-if ($user_id) {
-    include "db_connect.php";
+include "db_connect.php";  // MOVED: Always include for consistency
 
 $message = '';
 $message_type = '';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $full_name = htmlspecialchars($_POST['full_name']);
-    $phone_number = htmlspecialchars($_POST['phone_number']);
-    $address_detail = htmlspecialchars($_POST['address_detail']);
-    $postal_code = htmlspecialchars($_POST['postal_code']);
+if (!$user_id) {
+    // NEW: Handle non-logged-in users
+    $message = "You must be logged in to update your address.";
+    $message_type = 'error';
+} else {
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        $phone_number = htmlspecialchars($_POST['phone_number']);
+        $address_detail = htmlspecialchars($_POST['address_detail']);
+        $postal_code = htmlspecialchars($_POST['postal_code']);
 
-    $full_address = $address_detail . ' (Postal Code: ' . $postal_code . ')';
+        // Prepare the SQL UPDATE statement (FIXED: Added comma)
+        $sql = "UPDATE account SET user_address = ?, postal_code = ?, user_number = ? WHERE user_id = ?";
+        $stmt = $conn->prepare($sql);
 
-    // Prepare the SQL UPDATE statement
-    $sql = "UPDATE account SET user_address = ?, user_number = ? WHERE user_id = ?";
-    $stmt = $conn->prepare($sql);
-
-    if ($stmt) {
-        $stmt->bind_param("ssi", $full_address, $phone_number, $user_id);
-        
-        if ($stmt->execute()) {
-            $message = "Address updated successfully!";
-            $message_type = 'success';
-            header("Location: address.php?status=success");
-            exit();
+        if ($stmt) {
+            $stmt->bind_param("sssi", $address_detail, $postal_code, $phone_number, $user_id);
+            
+            if ($stmt->execute()) {
+                $message = "Address updated successfully!";
+                $message_type = 'success';
+                header("Location: address.php?status=success");
+                exit();
+            } else {
+                $message = "Error updating address: " . $stmt->error;
+                $message_type = 'error';
+            }
+            $stmt->close();
         } else {
-            $message = "Error updating address: " . $stmt->error;
+            $message = "SQL Prepare Error: " . $conn->error;
             $message_type = 'error';
         }
-        $stmt->close();
-    } else {
-        $message = "SQL Prepare Error: " . $conn->error;
-        $message_type = 'error';
     }
 }
-}
 
-$conn->close();
+$conn->close();  // MOVED: Always close at the end
 ?>
+
+<!-- Rest of HTML remains unchanged -->
+
 
 <!DOCTYPE html>
 <html lang="en">

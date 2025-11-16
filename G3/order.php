@@ -28,21 +28,6 @@ $cart_item_count = 0;
             </div>
     </div>
 
-    <nav class="tabs">
-        <a href="main_home.php">
-            <button class="tab">Home</button>
-        </a>
-        <a href="phone.php">
-            <button class="tab">Cellphone</button>
-        </a>
-        <a href="tablet.php">
-            <button class="tab">Tablet</button>
-         </a>
-        <a href="laptop.php">
-             <button class="tab">Laptop</button>
-        </a>
-    </nav>
-
     <div class="success-container">
         <div class="order-placed-box">
             

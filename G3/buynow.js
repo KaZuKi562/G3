@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 shippingBtn.classList.add('active');
                 pickupBtn.classList.remove('active');
                 
-                pickupInfoDiv.style.display = 'none';
+                pickupInfoDiv.style.display = 'none';   
                 shippingFieldsDiv.style.display = 'block'; 
             } else { 
                 pickupBtn.classList.add('active');
@@ -101,5 +101,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 productNameElement.textContent = baseName + (selectedMemory === '256' ? ' (256GB)' : ' (128GB)');
             }
         });
+    });
+});
+
+// ... (existing code)
+
+// Function to set final_getpoints from display
+function updateFinalGetPoints() {
+    const getPointsDisplay = document.getElementById('totalGetPointsDisplay');
+    if (getPointsDisplay) {
+        const getPoints = parsePoints(getPointsDisplay.textContent);
+        document.getElementById('finalGetPointsInput').value = getPoints;
+    }
+}
+
+// Set final_getpoints on page load
+updateFinalGetPoints();
+
+// Update final_getpoints when memory changes (if it affects points in the future)
+document.querySelectorAll('input[name="memory"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        // ... (existing memory change logic)
+        updateFinalGetPoints(); 
     });
 });

@@ -22,26 +22,28 @@ if ($stmt) {
     die("Error fetching user details: " . $conn->error);
 }
 
-// ✅ Fetch user's orders with JOIN to products table for missing fields
+// ✅ Fetch user's orders with LEFT JOIN to products table
 $sql = "
     SELECT 
         o.order_id,
         o.product_name,
-        (o.product_price * o.quantity) AS total_price,  -- Compute total dynamically
+        (o.product_price * o.quantity) AS total_price,
         o.product_price,
         o.quantity,
         o.selected_memory,
         o.payment_method,
         o.status,
         o.order_date,
-        p.img,        -- From products table
-        p.brand,      -- From products table
-        p.getpoints AS points  -- From products table (adjust if column name differs)
+        COALESCE(p.img, ph.img) AS img,        -- Take product img if exists, else phone img
+        COALESCE(p.brand, ph.brand) AS brand,  -- Same for brand
+        COALESCE(p.getpoints, ph.getpoints) AS points
     FROM orders o
-    JOIN products p ON o.product_id = p.id  -- JOIN with products table
+    LEFT JOIN products p ON o.product_id = p.id
+    LEFT JOIN phone ph ON o.product_id = ph.id
     WHERE o.user_id = ?
     ORDER BY o.order_date DESC
 ";
+
 $stmt = $conn->prepare($sql);
 if ($stmt) {
     $stmt->bind_param("i", $user_id);
@@ -111,6 +113,17 @@ if ($stmt) {
             font-weight: bold;
             color: #007bff;
         }
+        .cancel-btn { 
+            padding: 6px 12px; 
+            background-color: #ff4d4d; 
+            color: #fff; border: none; 
+            border-radius: 5px; cursor: pointer;
+             margin-top: 5px; 
+            }
+        .cancel-btn:disabled { 
+            background-color: #ccc; 
+            cursor: not-allowed; 
+}
     </style>
 </head>
 <body>
@@ -132,37 +145,43 @@ if ($stmt) {
                 <a href="main_home.php">Home</a>
                 <a href="user.php">My Account</a>
                 <a href="address.php">My Address</a>
-                <a href="myorder.php" >My Orders</a>  <!-- Added 'active' class for styling -->
+                <a href="myorder.php" >My Orders</a>
                 <a href="index.php">Logout</a>
             </div>
 
+            <div class="orders-container">
+                <h2>My Orders</h2>
 
-                <div class="orders-container">
-                    <h2>My Orders</h2>
-
-                    <?php if ($orders && $orders->num_rows > 0): ?>
-                        <?php while ($row = $orders->fetch_assoc()): ?>
-                            <div class="order-card">
-                                <div class="order-info">
-                                    <img src="<?php echo htmlspecialchars($row['img'] ?? ''); ?>" alt="Product">  <!-- Added fallback for missing img -->
-                                    <div class="order-details">
-                                        <strong><?php echo htmlspecialchars($row['product_name']); ?></strong>
-                                        <span><?php echo htmlspecialchars($row['brand'] ?? ''); ?></span><br>  <!-- Added fallback -->
-                                        <span><?php echo htmlspecialchars($row['selected_memory']); ?>GB</span><br>  <!-- Added 'GB' for clarity -->
-                                        <span>Payment: <?php echo htmlspecialchars($row['payment_method']); ?></span><br>
-                                        <span class="status"><?php echo htmlspecialchars($row['status']); ?></span>
-                                    </div>
-                                </div>
-                                <div class="order-meta">
-                                    <p>Qty: x<?php echo htmlspecialchars($row['quantity']); ?></p>
-                                    <p>Total: ₱<?php echo number_format($row['total_price']); ?></p>
+                <?php if ($orders && $orders->num_rows > 0): ?>
+                    <?php while ($row = $orders->fetch_assoc()): ?>
+                        <div class="order-card">
+                            <div class="order-info">
+                                <img src="<?= htmlspecialchars($row['img'] ?? 'placeholder.png') ?>" alt="Product">
+                                <div class="order-details">
+                                    <strong><?= htmlspecialchars($row['product_name']) ?></strong>
+                                    <span><?= htmlspecialchars($row['selected_memory']) ?>GB</span><br>
+                                    <span>Payment: <?= htmlspecialchars($row['payment_method']) ?></span><br>
+                                    <span class="status"><?= htmlspecialchars($row['status']) ?></span>
+                                    <?php if ($row['status'] != 'Cancelled'): ?>
+                                    <form method="POST" onsubmit="return confirm('Are you sure you want to cancel this order?');">
+                                        <input type="hidden" name="cancel_order_id" value="<?= $row['order_id'] ?>">
+                                        <button type="submit" class="cancel-btn">Cancel Order</button>
+                                    </form>
+                                <?php else: ?>
+                                     <button class="cancel-btn" disabled>Cancelled</button>
+                                <?php endif; ?>
                                 </div>
                             </div>
-                        <?php endwhile; ?>
-                    <?php else: ?>
-                        <p>No orders found.</p>
-                    <?php endif; ?>
-                </div>
+                            <div class="order-meta">
+                                <p>Qty: x<?= htmlspecialchars($row['quantity']) ?></p>
+                                <p>Total: ₱<?= number_format(floatval($row['total_price'])) ?></p>
+                            </div>
+                        </div>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <p>No orders found.</p>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 

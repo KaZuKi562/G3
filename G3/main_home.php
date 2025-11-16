@@ -182,6 +182,15 @@ $filteredProducts = $result->fetch_all(MYSQLI_ASSOC);
         <div class="ads-dots"></div>
     </div>
 
+    <nav class="tabs">
+        <a href="main_home.php">
+            <button class="tab active">Cellphone</button>
+        </a>
+        <a href="reserve.php">
+            <button class="tab">Pre-Order</button>
+         </a>
+    </nav>
+
     <div class="main-container">
         <header>
         </header>
